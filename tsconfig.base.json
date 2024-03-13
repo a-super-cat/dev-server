@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "noImplicitAny": false,
+    "noUnusedLocals": false,
+    "removeComments": false,
+    "noLib": false,
+    "lib": ["ESNext", "DOM"],
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "useUnknownInCatchVariables": false,
+    "target": "ESNext",
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "moduleResolution":"Node",
+    "allowSyntheticDefaultImports": true,
+    "sourceMap": true,
+    "allowJs": false,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "typeRoots": ["node_modules/@types"],
+    "importsNotUsedAsValues": "remove",
+    "isolatedModules": true,
+    "types": ["node"],
+    "paths": {
+      "@/*": ["src/*"],
+      "@mock/": ["mock/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "rollup*.ts", "test.ts"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
+}
