@@ -9,7 +9,7 @@ import mime from 'mime';
 
 // 将请求映射到目录src/web文件夹下的文件 例如：/web/index.html -> src/web/index.html
 const handleStaticResourceRequest = async (apiPath: string, res: ServerResponse<IncomingMessage>):Promise<void> => {
-  const paths = apiPath.split(/[\\/]/);
+  const paths = apiPath.split('/');
   let data: any = null;
   if(isFileExist(path.join(projectRootDir, 'node_modules/@jzw/dev-server-web/dist', ...paths))) {
     data = await readLocalFile(path.join(projectRootDir, 'node_modules/@jzw/dev-server-web/dist', ...paths));
