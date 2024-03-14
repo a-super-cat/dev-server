@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import fse from 'fs-extra';
-import { open, readdir } from 'node:fs/promises';
+import { open, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { asyncFilter } from '@/utils/commonUtils';
+import { assert } from 'node:console';
 
 // 项目根路径
 export let projectRootDir: string = '';
@@ -35,20 +37,38 @@ export const isFileExist = (path):boolean => {
 
 
 // ---------------------目录操作-----------------------
-// 获取目标目录下的所有一级目录
-export const getMockApiDirList = async (dirPath: string):Promise<any[]> => {
+// 获取目标目录下的所有一级目录,并按创建时间倒序排序
+export const getDirSubList = async (dirPath: string, options: { onlyDir?: boolean, onlyFile?: boolean } = { onlyDir: false, onlyFile: false }):Promise<string[]> => {
   let apiDirList:string[] = [];
+  const { onlyDir = false, onlyFile = false } = options;
   try {
-    apiDirList = await readdir(dirPath);
+    const fileList = await readdir(dirPath);
+    if (onlyDir || onlyFile) {
+      apiDirList = await asyncFilter(fileList, async (file) => {
+        const state = await stat(path.join(dirPath, file));
+        assert(state, 'getDirSubList stat error');
+        return onlyDir ? state.isDirectory() : state.isFile();
+      });
+    } else {
+      apiDirList = await readdir(dirPath);
+    }
   } catch {
     await fse.ensureDir(dirPath);
   }
-  return apiDirList;
+  return apiDirList.sort((a, b) =>{
+    try{
+      const aStat = fs.statSync(a);
+      const bStat = fs.statSync(b);
+      return bStat.birthtimeMs - aStat.birthtimeMs;
+    } catch {
+      return 0;
+    }
+  });
 };
 
-// 获取不同类型server对应的mock文件夹列表
-export const getMockApiSubDirList = async (serverType = 'http'): Promise<string[]> => {
-  const dirList = await getMockApiDirList(path.join(projectRootDir, 'mock', serverType));
+// 获取mock文件夹列表
+export const getMockApiSubDirList = async (): Promise<string[]> => {
+  const dirList = await getDirSubList(path.join(projectRootDir, 'mock'), { onlyDir: true });
   return dirList;
 };
 

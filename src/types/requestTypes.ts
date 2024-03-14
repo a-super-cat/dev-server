@@ -1,4 +1,5 @@
 export type RequestItemLocalConf = {
-  uuid: string;
+  id: string;
   apiPath: string,
+  type: string | 'http' | 'rpc',
 };

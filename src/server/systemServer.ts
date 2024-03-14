@@ -3,12 +3,13 @@ import path from 'node:path';
 import {
   projectRootDir,
   move,
+  getDirSubList,
 } from '@/utils/fileUtils';
 import { 
   readObjectFromJsonFile, 
   writeObjectToJsonFile,
-  httpMockConf,
-  rpcMockConf,
+  getMockItemSceneListConf,
+  initMockConf,
 } from '@/utils/jsonUtils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { MockConfigObj, JsonObj } from '@/types/basic';
@@ -18,42 +19,68 @@ let memoryMockConf = {} as any as MockConfigObj;
 let memoryMockItemIdAndApiPairList = [] as JsonObj[];
 
 const handleMockItemOperation = async (operation: string, param: any):Promise<any> => {
-  const { mockItemId: id, apiPath } = param;
-  assert(apiPath, 'apiPath is required');
-  const paths: string[] = apiPath.split('/');
-  paths[0] === '' && paths.shift();
-  paths[paths.length - 1] === '' && paths.pop();
-  const mockServerType = paths.length ? 'http' : 'rpc';
-  const [mockItemIdAndApiPairList, mockConf] = await (mockServerType === 'http' ? httpMockConf : rpcMockConf);
+  const { id, path: apiPath } = param;
+  const [mockItemIdAndApiPairList, mockConf] = await initMockConf;
   if(Object.keys(memoryMockConf).length === 0) {
     memoryMockConf = _.cloneDeep(mockConf);
     memoryMockItemIdAndApiPairList = _.cloneDeep(mockItemIdAndApiPairList);
   }
+  if(operation === 'list') {
+    console.log('memoryMockItemIdAndApiPairList', memoryMockItemIdAndApiPairList);
+    return await Promise.all(memoryMockItemIdAndApiPairList.map(async (item) => {
+      const { apiPath } = item;
+      // 获取mockItem的scene列表的配置
+      const scenesConf = await getMockItemSceneListConf(apiPath);
+      // 获取mockItem的scene文件列表
+      const scenesFileList = await getDirSubList(path.join(projectRootDir, 'mock', apiPath, 'scenes'), { onlyFile: true });
+      // 获取mockItem的基本信息
+      const mockItemBaseInfo = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', apiPath, 'baseConf.json'));
+      const scenesBaseInfoList = scenesFileList.map(fileName => {
+        const sceneId = fileName.replace(/.json^/, '');
+        return scenesConf[sceneId];
+      });
+      return {
+        basicInfo: mockItemBaseInfo,
+        scenesList: scenesBaseInfoList,
+      };
+    }));
+  }
+  assert(apiPath, 'apiPath is required');
+  const paths: string[] = apiPath.split('/');
+  paths[0] === '' && paths.shift();
+  paths[paths.length - 1] === '' && paths.pop();
+  const mockRequestType = paths.length ? 'http' : 'rpc';
   const apiAlbumPath = paths.length ? paths.join('.') : apiPath;
   switch (operation) {
     case 'save':
     {
-      // 如果id存在，且id对应的apiPath不是当前的apiPath，则移动文件且修改mockConf
-      if(memoryMockConf.id2Api[id] && memoryMockConf.id2Api[id] !== apiAlbumPath) {
-        await move(path.join(projectRootDir, 'mock', mockServerType, memoryMockConf.id2Api[id]), path.join(projectRootDir, 'mock', mockServerType, apiAlbumPath));
-      }
+      const originPath = memoryMockConf.id2ApiAndType[id]?.[0] || '';
       // 匹配以下情况则说明是新mockItem或者id对应的apiPath已经发生改变，需要进行mockConf的持久化
-      if (memoryMockConf.id2Api[id] !== apiAlbumPath) {
+      if (originPath !== apiAlbumPath) {
+        
+        // 如果id存在，且id对应的apiPath不是当前的apiPath，则移动文件
+        if (originPath) {
+          const whichChange = memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
+          console.log('whichChange', whichChange, param, memoryMockItemIdAndApiPairList);
+          assert(whichChange !== -1, 'mockItem id not found');
+          memoryMockItemIdAndApiPairList[whichChange].apiPath = apiAlbumPath;
+          await move(path.join(projectRootDir, 'mock', originPath), path.join(projectRootDir, 'mock', apiAlbumPath));
+        } else {
+          memoryMockItemIdAndApiPairList.unshift({ id, apiPath: apiAlbumPath, type: mockRequestType });
+        }
+
+        // 更新内存中的mockConf
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete memoryMockConf.api2Id[memoryMockConf.id2Api[id]];
-        memoryMockConf.id2Api[id] = apiAlbumPath;
+        delete memoryMockConf.api2Id[originPath];
+        memoryMockConf.id2ApiAndType[id] = [apiAlbumPath, mockRequestType];
         memoryMockConf.api2Id[apiAlbumPath] = id;
-        await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockServerType, 'mockConf.json'), memoryMockConf);
+        // 当mockConf发生变化时，memoryMockItemIdAndApiPairList也要进行更新
+        await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryMockConf);
       }
-      const res = writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockServerType, apiAlbumPath, 'baseConf.json'), param);
+      const res = writeObjectToJsonFile(path.join(projectRootDir, 'mock', apiAlbumPath, 'baseConf.json'), param);
       assert(res, 'save mockItem failed');
       return true;
     }
-    case 'list':
-    {
-      return mockItemIdAndApiPairList;
-    }
-
   }
 };
 
@@ -85,6 +112,7 @@ const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
         return await handleSceneItemOperation('delete', param);
     }
   } catch (err) {
+    console.log('dispatchRequest error:', err);
     return err;
   }
 };

@@ -2,14 +2,12 @@ import jsonFile from 'jsonfile';
 import { 
   touchFile,
   getMockApiSubDirList,
-  isDirectory,
   projectRootDir,
 } from '@/utils/fileUtils';
 import type { MockConfigObj, JsonObj } from '@/types/basic';
 import type { JFWriteOptions } from 'jsonfile';
 import type { RequestItemLocalConf } from '@/types/requestTypes';
 import path from 'path';
-import { v4 as uuid } from 'uuid';
 
 // 从json文件中读取对象 
 export const readObjectFromJsonFile = async (filePath: string): Promise<JsonObj> => {
@@ -32,37 +30,31 @@ export const writeObjectToJsonFile = async (filePath: string, obj: any, option: 
   }
 };
 
-// 初始化 请求的配置(api和id的对应关系)
-export const initExistedRequests = async (serverType = 'http'):Promise<[RequestItemLocalConf[], MockConfigObj]> => {
-  let isNeedStoreApiConf = false;
-  const configPath = path.join(projectRootDir, 'mock', serverType, 'mockConf.json');
-  const httpMockConf = await readObjectFromJsonFile(configPath) as MockConfigObj;
-  if(Object.keys(httpMockConf).length === 0) {
-    httpMockConf.id2Api = {};
-    httpMockConf.api2Id = {};
+// 初始化 请求的配置(api和id以及api类型的对应关系)
+export const initExistedRequests = async ():Promise<[RequestItemLocalConf[], MockConfigObj]> => {
+  const configPath = path.join(projectRootDir, 'mock', 'mockConf.json');
+  const mockConf = await readObjectFromJsonFile(configPath) as MockConfigObj;
+  if(Object.keys(mockConf).length === 0) {
+    mockConf.id2ApiAndType = {};
+    mockConf.api2Id = {};
   }
-  const mockApiDirList = await getMockApiSubDirList(serverType);
-  const apiAndIdPair = mockApiDirList
-    .filter(orgPath => isDirectory(path.join(projectRootDir, 'mock', serverType, orgPath)))
-    .map(apiPath => {
-      if(httpMockConf.api2Id[apiPath]) {
-        return { apiPath, uuid: httpMockConf.api2Id[apiPath] };
-      } else {
-        isNeedStoreApiConf = true;
-        const apiId = uuid();
-        httpMockConf.api2Id[apiPath] = apiId;
-        httpMockConf.id2Api[apiId] = apiPath;
-        return { apiPath, uuid: apiId };
-      }
-    });
+  const mockApiDirList = await getMockApiSubDirList();
+  const apiAndIdPair = [] as RequestItemLocalConf[];
+  mockApiDirList.forEach(apiPath => {
+    if(mockConf.api2Id[apiPath]) {
+      apiAndIdPair.push({ apiPath, id: mockConf.api2Id[apiPath], type: mockConf.id2ApiAndType[mockConf.api2Id[apiPath]][1] });
+    } else {
+      throw new Error(`${apiPath} not register in mockConf.json`);
+    }
+  });
 
-  if(isNeedStoreApiConf) {
-    await writeObjectToJsonFile(configPath, httpMockConf);
-  }
-  isNeedStoreApiConf = false;
-  return [apiAndIdPair, httpMockConf];
+  return [apiAndIdPair, mockConf];
+};
+
+// 获取具体mockItem项的scene列表的配置（key为sceneId，value为对象包含scene的名称及参数）
+export const getMockItemSceneListConf = async (apiPath: string ): Promise<JsonObj> => {
+  return await readObjectFromJsonFile(path.join(projectRootDir, 'mock', apiPath, 'scenesConf.json'));
 };
 
 
-export const httpMockConf = initExistedRequests('http');
-export const rpcMockConf = initExistedRequests('rpc');
+export const initMockConf = initExistedRequests();
