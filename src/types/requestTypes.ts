@@ -3,3 +3,11 @@ export type RequestItemLocalConf = {
   apiPath: string,
   type: string | 'http' | 'rpc',
 };
+
+export type SceneItemParam = {
+  id: string;
+  name?: string;
+  param?: string;
+  responseConf?: string;
+  mockItemId: string;
+};

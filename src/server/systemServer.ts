@@ -1,9 +1,11 @@
 import assert from 'assert';
 import path from 'node:path';
+import fse from 'fs-extra';
 import {
   projectRootDir,
   move,
   getDirSubList,
+  readLocalFile,
 } from '@/utils/fileUtils';
 import { 
   readObjectFromJsonFile, 
@@ -18,39 +20,47 @@ import _ from 'lodash';
 let memoryMockConf = {} as any as MockConfigObj;
 let memoryMockItemIdAndApiPairList = [] as JsonObj[];
 
-const handleMockItemOperation = async (operation: string, param: any):Promise<any> => {
-  const { id, path: apiPath } = param;
+const getServerExistData = async ():Promise<[MockConfigObj, JsonObj[]]> => {
   const [mockItemIdAndApiPairList, mockConf] = await initMockConf;
   if(Object.keys(memoryMockConf).length === 0) {
     memoryMockConf = _.cloneDeep(mockConf);
     memoryMockItemIdAndApiPairList = _.cloneDeep(mockItemIdAndApiPairList);
   }
+  return [ memoryMockConf, memoryMockItemIdAndApiPairList ];
+};
+
+await getServerExistData();
+
+const handleMockItemOperation = async (operation: string, param: any):Promise<any> => {
+  const { id, path: mockApiPath } = param;
+  await getServerExistData();
   if(operation === 'list') {
-    console.log('memoryMockItemIdAndApiPairList', memoryMockItemIdAndApiPairList);
     return await Promise.all(memoryMockItemIdAndApiPairList.map(async (item) => {
-      const { apiPath } = item;
+      const { apiPath: mockApiPath } = item;
       // 获取mockItem的scene列表的配置
-      const scenesConf = await getMockItemSceneListConf(apiPath);
+      const scenesConf = await getMockItemSceneListConf(mockApiPath);
       // 获取mockItem的scene文件列表
-      const scenesFileList = await getDirSubList(path.join(projectRootDir, 'mock', apiPath, 'scenes'), { onlyFile: true });
+      const scenesFileList = await getDirSubList(path.join(projectRootDir, 'mock', mockApiPath, 'scenes'), { onlyFile: true });
       // 获取mockItem的基本信息
-      const mockItemBaseInfo = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', apiPath, 'baseConf.json'));
+      const mockItemBaseInfo = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'baseConf.json'));
       const scenesBaseInfoList = scenesFileList.map(fileName => {
-        const sceneId = fileName.replace(/.json^/, '');
-        return scenesConf[sceneId];
+        const sceneId = fileName.replace(/.ts$/, '');
+        return { id: sceneId, ...scenesConf[sceneId] };
       });
+
       return {
         basicInfo: mockItemBaseInfo,
         scenesList: scenesBaseInfoList,
       };
     }));
   }
-  assert(apiPath, 'apiPath is required');
-  const paths: string[] = apiPath.split('/');
+
+  assert(mockApiPath, 'apiPath is required');
+  const paths: string[] = mockApiPath.split('/');
   paths[0] === '' && paths.shift();
   paths[paths.length - 1] === '' && paths.pop();
   const mockRequestType = paths.length ? 'http' : 'rpc';
-  const apiAlbumPath = paths.length ? paths.join('.') : apiPath;
+  const apiAlbumPath = paths.length ? paths.join('.') : mockApiPath;
   switch (operation) {
     case 'save':
     {
@@ -77,7 +87,7 @@ const handleMockItemOperation = async (operation: string, param: any):Promise<an
         // 当mockConf发生变化时，memoryMockItemIdAndApiPairList也要进行更新
         await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryMockConf);
       }
-      const res = writeObjectToJsonFile(path.join(projectRootDir, 'mock', apiAlbumPath, 'baseConf.json'), param);
+      const res = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', apiAlbumPath, 'baseConf.json'), param);
       assert(res, 'save mockItem failed');
       return true;
     }
@@ -85,7 +95,49 @@ const handleMockItemOperation = async (operation: string, param: any):Promise<an
 };
 
 const handleSceneItemOperation = async (operation: string, param: any):Promise<any> => {
-  
+  const mockApiPath = memoryMockConf.id2ApiAndType[param.mockItemId][0];
+  const scenesConf = await getMockItemSceneListConf(mockApiPath);
+  const scenesFileList = await getDirSubList(path.join(projectRootDir, 'mock', mockApiPath, 'scenes'), { onlyFile: true });
+  const sceneItemIdAndInfoPairList = scenesFileList.map(fileName => {
+    const sceneId = fileName.replace(/.ts$/, '');
+    return { id: sceneId, ...scenesConf[sceneId] };
+  });
+  switch (operation) {
+    case 'list':
+      return sceneItemIdAndInfoPairList;
+    case 'save':
+    {
+      const { id, name, param: sceneReqParam, responseConf, mockItemId } = param;
+      if (!scenesConf[id]) {
+        sceneItemIdAndInfoPairList.unshift({ id, name, param: sceneReqParam });
+      }
+      scenesConf[id] = { name, param: sceneReqParam };
+      const mockApiPath = memoryMockConf.id2ApiAndType[mockItemId][0];
+      const writeSceneConfres = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenesConf.json'), scenesConf);
+      await fse.outputFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenes', `${id}.ts`), responseConf ?? '');
+      assert(writeSceneConfres, 'save sceneItem failed');
+      return sceneItemIdAndInfoPairList;
+    }
+    case 'one':
+    {
+      const { mockItemId, sceneId } = param;
+      const apiPath = memoryMockConf.id2ApiAndType[mockItemId][0];
+      const file = await readLocalFile(path.join(projectRootDir, 'mock', apiPath, 'scenes', `${sceneId}.ts`));
+      return file;
+    }
+    case 'delete':
+    {
+      const { mockItemId, sceneId } = param;
+      const apiPath = memoryMockConf.id2ApiAndType[mockItemId][0];
+      assert(apiPath, 'not fond apiPath in dir');
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete scenesConf[sceneId];
+      const i = sceneItemIdAndInfoPairList.findIndex((item) => item.id === sceneId);
+      sceneItemIdAndInfoPairList.splice(i, 1);
+      await fse.remove(path.join(projectRootDir, 'mock', apiPath, 'scenes', `${sceneId}.ts`));
+      return sceneItemIdAndInfoPairList;
+    }
+  }
 };
 
 // 分发请求
@@ -113,7 +165,7 @@ const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
     }
   } catch (err) {
     console.log('dispatchRequest error:', err);
-    return err;
+    throw err;
   }
 };
 
