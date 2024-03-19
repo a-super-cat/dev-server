@@ -5,3 +5,16 @@ export type MockConfigObj = {
   id2ApiAndType: Record<string, string[]>;
   api2Id: JsonObj;
 };
+
+/**
+ * {
+ *  "http": {
+ *   "apiPath": {
+ *      "sceneItemId": { id: string, name: string, param: string }
+ *    }
+ *  }
+ * }
+ */
+export type MemoryMockItemAndSceneItemConfType = Record<string, Record<string, Record<string, { id: string, name: string, param: string }>>>;
+
+export type AppMockConfType = Array<{ basicInfo: JsonObj, scenesList: Array<{ id: string, name: string, param: string }> }>;

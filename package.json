@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "rollup --config rollup.config.ts --configPlugin swc3 -w",
-    "prev:w": "nodemon ./dist/index.js",
+    "prev:w": "nodemon --watch src/ dist/index.js",
     "prev": "node ./dist/index.js",
     "build": "rollup --config rollup.config.ts --configPlugin swc3",
     "lint": "eslint src/**"
@@ -53,6 +53,7 @@
     "jsonfile": "^6.1.0",
     "lodash": "^4.17.21",
     "mime": "^4.0.1",
+    "ts-morph": "^22.0.0",
     "uuid": "^9.0.1"
   }
 }
