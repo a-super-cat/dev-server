@@ -14,6 +14,7 @@ export type SceneItemParam = {
   id: string;
   name?: string;
   param?: string;
+  iteration?: string;
   responseConf?: string;
   mockItemId: string;
 };

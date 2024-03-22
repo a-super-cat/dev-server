@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "rollup --config rollup.config.ts --configPlugin swc3 -w",
-    "prev:w": "nodemon --watch src/ dist/index.js",
+    "prev:w": "nodemon dist/index.js",
     "prev": "node ./dist/index.js",
     "build": "rollup --config rollup.config.ts --configPlugin swc3",
     "lint": "eslint src/**"
@@ -22,6 +22,7 @@
     "@types/lodash": "^4.17.0",
     "@types/node": "^20.10.0",
     "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.10",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.54.0",
@@ -48,12 +49,16 @@
     ]
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.10.3",
+    "@grpc/proto-loader": "^0.7.10",
     "chalk": "^5.3.0",
     "fs-extra": "^11.2.0",
+    "json5": "^2.2.3",
     "jsonfile": "^6.1.0",
     "lodash": "^4.17.21",
     "mime": "^4.0.1",
     "ts-morph": "^22.0.0",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "ws": "^8.16.0"
   }
 }

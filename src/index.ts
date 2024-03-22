@@ -1,10 +1,23 @@
 import http from 'node:http';
-import { URL } from 'node:url';
+import { WebSocketServer } from 'ws';
+import { URL, fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { handleWebRequest, handleHttpMockRequest, handleSystemRequest } from '@/server';
 import chalk from 'chalk';
-import c from 'node:child_process';
+import c, { fork } from 'node:child_process';
+import { v4 as uuid } from 'uuid';
+import type { ServerResponse, IncomingMessage } from 'node:http';
+import { loadSync } from '@grpc/proto-loader';
+import grpc, { loadPackageDefinition, ServerCredentials } from '@grpc/grpc-js';
+
+const _dirname = join(fileURLToPath(import.meta.url), '../');
+const localIps = ['::1', '127.0.0.1'];
+
 const apiServerPort = 3000;
+const webSocketPort = 3001;
 const webServerPort = 8080;
+
+const messageStatusPair: any = {};
 
 const startServer = (port: number, remark: string, open = false): http.Server => {
   const server = http.createServer();
@@ -30,8 +43,48 @@ const startServer = (port: number, remark: string, open = false): http.Server =>
   return server;
 };
 
+// websocket服务
+const wsServer = new WebSocketServer({ port: webSocketPort });
+wsServer.on('listening', () => {
+  console.log(chalk.green(`WebSocket Server running at ws://localhost:${webSocketPort}/`));
+});
+wsServer.on('connection', (ws) => {
+  console.log(chalk.green('WebSocket Server connected'));
+});
+
+const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes: any) => {
+  const { data, mockItemId, matchedScene, success } = messageRes;
+  response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  const statusCode = success ? 200 : 500;
+  response.write(JSON.stringify({ code: statusCode, data, msg: success ? 'success' : 'fail' }));
+  response.statusCode = statusCode;
+  response.end();
+  wsServer.clients.forEach((client: any) => {
+    const wsReqIp = client._socket.remoteAddress;
+    if (localIps.includes(wsReqIp)) {
+      client.send(JSON.stringify({ type: 'param', data: { mockItemId, matchedScene, param } }));
+    }
+  });
+  resolve(messageRes);
+};
+
+const httpWorker = fork(join(_dirname, './server/service/httpWorkerService.js'));
+httpWorker.on('message', (msg: any) => {
+  const { messageId } = msg;
+  messageStatusPair?.[messageId]?.(msg);
+  // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+  delete messageStatusPair[messageId];
+});
+
+const handleHttpWorkerRequest = async (arg: any, response: ServerResponse<IncomingMessage>): Promise<void> => {
+  await new Promise((resolve, reject) => {
+    const { messageId, param } = arg;
+    messageStatusPair[messageId] = afterMessageDealCallBack(resolve, param, response);
+    httpWorker.send(arg);
+  });
+};
+
 const apiServer = startServer(apiServerPort, 'API');
-// const webServer =startServer(webServerPort, 'WEB', false);
 
 apiServer.on('request', (req, res) => {
   const parsedUrl = new URL(req.url ?? '', `http://${req.headers.host}`);
@@ -68,11 +121,15 @@ apiServer.on('request', (req, res) => {
           }
           break;
         default:
-          res.end('Received data');
+          console.log('other header: ', req.headers['content-type']);
           break;
       }
     }
 
+    const paths: string[] = apiPath.split('/');
+    paths[0] === '' && paths.shift();
+    paths[paths.length - 1] === '' && paths.pop();
+    const formattedPath = paths.length ? paths.join('.') : apiPath;
     switch (true) {
       case /^\/?mock-system\/.*/.test(apiPath):
         handleSystemRequest(apiPath, param, res);
@@ -81,28 +138,12 @@ apiServer.on('request', (req, res) => {
         handleWebRequest(apiPath, res);
         break;
       default:
-        handleHttpMockRequest(apiPath);
-        res.setHeader('Content-Type', 'application/json');
-        res.write('{"msg": "hello world"}');
-        res.statusCode = 200;
-        res.end();
+        {
+          const messageId = uuid();
+          handleHttpWorkerRequest({ apiPath: formattedPath, param, messageId }, res).catch(console.error);
+        }
         break;
     }
 
   });
 });
-
-// webServer.on('request', (req, res) => {
-//   const parsedUrl = new URL(req.url ?? '', `http://${req.headers.host}`);
-//   const webPath: string = parsedUrl.pathname;
-//   handleWebRequest(webPath, req).then((data) => {
-//     if(data) {
-//       res.setHeader('Content-Type', mime.getType(webPath));
-//       res.write(data);
-//       res.statusCode = 200;
-//       res.end();
-//     }
-//   }).catch((err) => {
-//     console.log('err', err);
-//   });
-// });

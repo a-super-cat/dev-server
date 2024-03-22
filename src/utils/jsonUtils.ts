@@ -31,18 +31,18 @@ export const writeObjectToJsonFile = async (filePath: string, obj: any, option: 
 };
 
 // 初始化 请求的配置(api和id以及api类型的对应关系)
-export const initExistedRequests = async ():Promise<[RequestItemLocalConf[], MockConfigObj]> => {
+export const initMockConf = async ():Promise<[RequestItemLocalConf[], MockConfigObj]> => {
   const configPath = path.join(projectRootDir, 'mock', 'mockConf.json');
   const mockConf = await readObjectFromJsonFile(configPath) as MockConfigObj;
   if(Object.keys(mockConf).length === 0) {
     mockConf.id2ApiAndType = {};
-    mockConf.api2Id = {};
+    mockConf.api2IdAndCheckedScene = {};
   }
   const mockApiDirList = await getMockApiSubDirList();
   const apiAndIdPair = [] as RequestItemLocalConf[];
   mockApiDirList.forEach(apiPath => {
-    if(mockConf.api2Id[apiPath]) {
-      apiAndIdPair.push({ apiPath, id: mockConf.api2Id[apiPath], type: mockConf.id2ApiAndType[mockConf.api2Id[apiPath]][1] });
+    if(mockConf.api2IdAndCheckedScene[apiPath].id) {
+      apiAndIdPair.push({ apiPath, id: mockConf.api2IdAndCheckedScene?.[apiPath]?.id, type: mockConf.id2ApiAndType[mockConf.api2IdAndCheckedScene[apiPath].id][1] });
     } else {
       throw new Error(`${apiPath} not register in mockConf.json`);
     }
@@ -55,6 +55,3 @@ export const initExistedRequests = async ():Promise<[RequestItemLocalConf[], Moc
 export const getMockItemSceneListConf = async (apiPath: string ): Promise<JsonObj> => {
   return await readObjectFromJsonFile(path.join(projectRootDir, 'mock', apiPath, 'scenesConf.json'));
 };
-
-
-export const initMockConf = initExistedRequests();
