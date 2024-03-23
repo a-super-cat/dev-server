@@ -8,8 +8,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
+      - name: Echo token
+        run: echo "The token is $NODE_AUTH_TOKEN"
+        
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -23,8 +28,6 @@ jobs:
         run: npm run build
 
       - name: Log in to npm registry
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: echo "//npm.key=$NODE_AUTH_TOKEN"
 
       - name: Publish package
