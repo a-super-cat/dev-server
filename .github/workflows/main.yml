@@ -9,8 +9,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    steps:  
+    steps:
       - name: Checkout code
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         uses: actions/checkout@v4
         with:
           node-version: '18.x'
@@ -25,4 +27,4 @@ jobs:
       - name: Publish package
         run: npm publish --access public
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
