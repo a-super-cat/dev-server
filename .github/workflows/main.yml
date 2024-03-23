@@ -20,7 +20,7 @@ jobs:
         registry-url: https://registry.npmjs.org/
 
     - name: Setup pnpm
-      uses: clutchd/turbostart-pnpm@v3.0.0
+      uses: jjs98/pnpm-install-action@v6
 
     - name: Install dependencies
       run: pnpm i
