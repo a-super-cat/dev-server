@@ -26,6 +26,7 @@ jobs:
       run: npm run build
 
     - name: Publish to npm
-      uses: lyzhang1999/npm-publish@v1.0.2
+      uses: JS-DevTools/npm-publish@v3.1.0
       with:
         token: ${{ secrets.NPM_TOKEN }}
+        access: public
