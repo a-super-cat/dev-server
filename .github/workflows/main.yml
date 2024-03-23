@@ -25,7 +25,7 @@ jobs:
       - name: Log in to npm registry
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: echo "//npm.key=$NODE_AUTH_TOKEN" >> .npmrc
+        run: echo "//npm.key=$NODE_AUTH_TOKEN"
 
       - name: Publish package
         run: npm publish --access public
