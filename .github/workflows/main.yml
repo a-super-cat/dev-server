@@ -22,7 +22,6 @@ jobs:
       - name: Build
         run: npm run build
       - name: Authenticate with npm
-        run: npm login --registry=https://registry.npmjs.org/ --scope=public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
