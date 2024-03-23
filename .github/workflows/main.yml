@@ -24,6 +24,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Authenticate with npm
+        run: |
+          echo $OTP | npm login --registry=https://registry.npmjs.org/ --scope=public --auth-type=token
+
       - name: Publish package
         run: npm publish --access public
         env:
