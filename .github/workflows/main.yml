@@ -19,11 +19,14 @@ jobs:
         node-version: 18
         registry-url: https://registry.npmjs.org/
 
+    - name: Setup pnpm
+      uses: clutchd/turbostart-pnpm@v3.0.0
+
     - name: Install dependencies
-      run: npm i
+      run: pnpm i
 
     - name: Build
-      run: npm run build
+      run: pnpm run build
 
     - name: Publish to npm
       uses: JS-DevTools/npm-publish@v3.1.0
