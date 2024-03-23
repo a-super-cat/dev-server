@@ -8,19 +8,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
     steps:
       - name: Echo token
         run: echo "The token is $NODE_AUTH_TOKEN"
         
       - name: Checkout code
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         uses: actions/checkout@v4
         with:
           node-version: '18.x'
-          registry-url: 'https://registry.npmjs.org'
-
+          registry-url: 'https://npm.pkg.github.com/'
       - name: Install dependencies
         run: npm install
 
@@ -31,4 +30,6 @@ jobs:
         run: echo "//npm.key=$NODE_AUTH_TOKEN"
 
       - name: Publish package
-        run: npm publish dist --access public
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
