@@ -12,15 +12,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          node-version: '18.x'
-          registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
         run: npm install
 
       - name: Build
         run: npm run build
+
+      - name: Authenticate with npm
+        run: |
+          echo $OTP | npm login --registry=https://registry.npmjs.org/ --scope=public --auth-type=token
 
       - name: Publish package
         env:
