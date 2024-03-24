@@ -9,6 +9,9 @@ import { assert } from 'node:console';
 // 项目根路径
 export let projectRootDir: string = '';
 
+// devserver根路径
+export const devServerRootDir = path.join(fileURLToPath(import.meta.url), '../../../');
+
 // 获取项目根路径
 export const findProjectRootDir = (dir = fileURLToPath(import.meta.url)):string => {
   let tmpPath: string = dir;

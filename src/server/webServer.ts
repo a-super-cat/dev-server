@@ -1,7 +1,7 @@
 import { 
   readLocalFile, 
   isFileExist,
-  projectRootDir,
+  devServerRootDir,
 } from '@/utils/fileUtils';
 import type { ServerResponse, IncomingMessage } from 'http';
 import path from 'node:path';
@@ -9,12 +9,13 @@ import mime from 'mime';
 
 // 将请求映射到目录src/web文件夹下的文件 例如：/web/index.html -> src/web/index.html
 const handleStaticResourceRequest = async (apiPath: string, res: ServerResponse<IncomingMessage>):Promise<void> => {
-  const paths = apiPath.split('/');
+  const filePath = apiPath.replace(/^\/?mock-web\//, '');
+  const paths = filePath.split('/');
   let data: any = null;
-  if(isFileExist(path.join(projectRootDir, 'node_modules/@jzw/dev-server-web/dist', ...paths))) {
-    data = await readLocalFile(path.join(projectRootDir, 'node_modules/@jzw/dev-server-web/dist', ...paths));
+  if(isFileExist(path.join(devServerRootDir, 'web', ...paths))) {
+    data = await readLocalFile(path.join(devServerRootDir, 'web', ...paths));
   } else {
-    data = await readLocalFile(path.join(projectRootDir, 'node_modules/@jzw/dev-server-web/dist', 'index.html'));
+    data = await readLocalFile(path.join(devServerRootDir, 'web', 'index.html'));
   }
   if(data) {
     res.setHeader('Content-Type', mime.getType(apiPath) ?? 'text/html;charset=utf-8');

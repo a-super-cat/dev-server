@@ -24,23 +24,26 @@ import type {
 import { type SceneItemParam, type MockItemParam } from '@/types/requestTypes';
 import _ from 'lodash';
 
-let memoryMockConf = {} as any as MockConfigObj;
-let memoryMockItemIdAndApiPairList = [] as JsonObj[];
+const memoryData = {
+  memoryMockConf: {} as any as MockConfigObj,
+  memoryMockItemIdAndApiPairList: [] as JsonObj[],
+  memoryMockItemAndSceneItemListPair: {} satisfies Record<string, SceneItemBaseInfoType[]>,
+  memoryMockItemAndSceneItemConf: {} as any as MemoryMockItemAndSceneItemConfType,  // 这个是给worker线程用，用来获取匹配的参数
+  appMockConf: [] as AppMockConfType,
+};
 
-let appMockConf = [] as AppMockConfType;
-const memoryMockItemAndSceneItemListPair: Record<string, Array<{ id: string, name: string, param: string }>> = {};
+export type MemoryDataType = typeof memoryData;
 
-// 这个是给worker线程用，用来获取匹配的参数
-let memoryMockItemAndSceneItemConf = {} as any as MemoryMockItemAndSceneItemConfType;
+export const getMemoryData = (): MemoryDataType => memoryData;
 
 // 获取mockItem配置数据
 export const getMockItemConfData = async ():Promise<[MockConfigObj, JsonObj[]]> => {
   const [mockItemIdAndApiPairList, mockConf] = await initMockConf();
-  if(Object.keys(memoryMockConf).length === 0) {
-    memoryMockConf = _.cloneDeep(mockConf);
-    memoryMockItemIdAndApiPairList = _.cloneDeep(mockItemIdAndApiPairList);
+  if(Object.keys(memoryData.memoryMockConf).length === 0) {
+    memoryData.memoryMockConf = _.cloneDeep(mockConf);
+    memoryData.memoryMockItemIdAndApiPairList = _.cloneDeep(mockItemIdAndApiPairList);
   }
-  return [ memoryMockConf, memoryMockItemIdAndApiPairList ];
+  return [ memoryData.memoryMockConf, memoryData.memoryMockItemIdAndApiPairList ];
 };
 
 await getMockItemConfData();
@@ -48,7 +51,7 @@ await getMockItemConfData();
 // 获取mock的全量配置（搜索建立在此基础上）
 export const getAppMockConf = async (): Promise<any> => {
   await getMockItemConfData();
-  const listForWeb = await Promise.all(memoryMockItemIdAndApiPairList.map(async (item) => {
+  const listForWeb = await Promise.all(memoryData.memoryMockItemIdAndApiPairList.map(async (item) => {
     const { apiPath: mockApiPath } = item;
     // 获取mockItem的scene列表的配置
     const scenesConf = await getMockItemSceneListConf(mockApiPath);
@@ -60,7 +63,7 @@ export const getAppMockConf = async (): Promise<any> => {
       const sceneId = fileName.replace(/.ts$/, '');
       return { id: sceneId, ...scenesConf[sceneId] };
     });
-    const mockItemSelectedSceneId = memoryMockConf.api2IdAndCheckedScene[mockApiPath]?.selectedSceneId || '';
+    const mockItemSelectedSceneId = memoryData.memoryMockConf.api2IdAndCheckedScene[mockApiPath]?.selectedSceneId || '';
     return {
       basicInfo: {
         ...mockItemBaseInfo,
@@ -70,14 +73,14 @@ export const getAppMockConf = async (): Promise<any> => {
     };
   }));
 
-  appMockConf = listForWeb;
+  memoryData.appMockConf = listForWeb;
 
   listForWeb.forEach((next) => {
-    memoryMockItemAndSceneItemListPair[next.basicInfo.id] = next.scenesList;
+    memoryData.memoryMockItemAndSceneItemListPair[next.basicInfo.id] = next.scenesList;
   });
 
-  memoryMockItemAndSceneItemConf = listForWeb.reduce((mockItemRes, next) => {
-    const { api: apiDirName, type: mockType } = memoryMockConf.id2ApiAndType[next.basicInfo.id];
+  memoryData.memoryMockItemAndSceneItemConf = listForWeb.reduce((mockItemRes, next) => {
+    const { api: apiDirName, type: mockType } = memoryData.memoryMockConf.id2ApiAndType[next.basicInfo.id];
     if (!mockItemRes[mockType]) {
       mockItemRes[mockType] = {};
     }
@@ -90,14 +93,14 @@ export const getAppMockConf = async (): Promise<any> => {
 
   return {
     listForWeb,
-    memoryMockItemAndSceneItemListPair,
-    memoryMockItemAndSceneItemConf,
+    memoryMockItemAndSceneItemListPair: memoryData.memoryMockItemAndSceneItemListPair,
+    memoryMockItemAndSceneItemConf: memoryData.memoryMockItemAndSceneItemConf,
   };
 };
 
 export const getMockItemAndSceneItemConf = async ():Promise<MemoryMockItemAndSceneItemConfType> => {
   await getAppMockConf();
-  return memoryMockItemAndSceneItemConf;
+  return memoryData.memoryMockItemAndSceneItemConf;
 };
 
 // 保存迭代列表
@@ -115,7 +118,7 @@ export const handleGetIterationList = async (): Promise<string[]> => {
 // 搜索mockItem
 export const handleSearchMockItem = async (param?: any): Promise<AppMockConfType> => {
   await getAppMockConf();
-  return appMockConf;
+  return memoryData.appMockConf;
 };
 
 // 添加或修改mockItem
@@ -127,29 +130,29 @@ export const handleAddOrUpdateMockItemConf = async (param: MockItemParam): Promi
   const apiAlbumPath = paths.length ? paths.join('.') : mockApiPath;
 
   assert(mockApiPath, 'apiPath is required');
-  const originPath = memoryMockConf.id2ApiAndType[id]?.api || '';
+  const originPath = memoryData.memoryMockConf.id2ApiAndType[id]?.api || '';
   // 匹配以下情况则说明是新mockItem或者id对应的apiPath已经发生改变，需要进行mockConf的持久化
   if (originPath !== apiAlbumPath) {
     
     // 如果id存在，且id对应的apiPath不是当前的apiPath，则移动文件
     if (originPath) {
-      const whichChange = memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
-      console.log('whichChange', whichChange, param, memoryMockItemIdAndApiPairList);
+      const whichChange = memoryData.memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
+      console.log('whichChange', whichChange, param, memoryData.memoryMockItemIdAndApiPairList);
       assert(whichChange !== -1, 'mockItem id not found');
-      memoryMockItemIdAndApiPairList[whichChange].apiPath = apiAlbumPath;
+      memoryData.memoryMockItemIdAndApiPairList[whichChange].apiPath = apiAlbumPath;
       await move(path.join(projectRootDir, 'mock', originPath), path.join(projectRootDir, 'mock', apiAlbumPath));
     } else {
-      memoryMockItemIdAndApiPairList.unshift({ id, apiPath: apiAlbumPath, type: mockRequestType });
+      memoryData.memoryMockItemIdAndApiPairList.unshift({ id, apiPath: apiAlbumPath, type: mockRequestType });
     }
 
     // 更新内存中的mockConf
-    const oldConf = memoryMockConf.api2IdAndCheckedScene?.[originPath] ?? {};
+    const oldConf = memoryData.memoryMockConf.api2IdAndCheckedScene?.[originPath] ?? {};
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete memoryMockConf.api2IdAndCheckedScene[originPath];
-    memoryMockConf.id2ApiAndType[id] = { api: apiAlbumPath, type: mockRequestType };
-    memoryMockConf.api2IdAndCheckedScene[apiAlbumPath] = { ...oldConf, id, remarks, mockPattern };
+    delete memoryData.memoryMockConf.api2IdAndCheckedScene[originPath];
+    memoryData.memoryMockConf.id2ApiAndType[id] = { api: apiAlbumPath, type: mockRequestType };
+    memoryData.memoryMockConf.api2IdAndCheckedScene[apiAlbumPath] = { ...oldConf, id, remarks, mockPattern };
     // 当mockConf发生变化时，memoryMockItemIdAndApiPairList也要进行更新
-    await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryMockConf);
+    await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
   }
   const res = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', apiAlbumPath, 'baseConf.json'), param);
   assert(res, 'save mockItem failed');
@@ -160,35 +163,48 @@ export const handleAddOrUpdateMockItemConf = async (param: MockItemParam): Promi
 export const handleDeleteMockItem = async (param: { id: string }): Promise<any> => {
   const { id } = param;
   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-  delete memoryMockConf[id];
-  await fse.remove(path.join(projectRootDir, 'mock', memoryMockConf.id2ApiAndType[id].api));
-  const i = memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
-  i > -1 && memoryMockItemIdAndApiPairList.splice(i, 1);
-  await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryMockConf);
+  delete memoryData.memoryMockConf[id];
+  await fse.remove(path.join(projectRootDir, 'mock', memoryData.memoryMockConf.id2ApiAndType[id].api));
+  const i = memoryData.memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
+  i > -1 && memoryData.memoryMockItemIdAndApiPairList.splice(i, 1);
+  console.log('some 555555555', memoryData.memoryMockConf);
+  await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
   return true;
 };
 
 // 添加或修改mockItem的scene
 export const handleAddOrUpdateSceneItem = async (param: SceneItemParam): Promise<SceneItemBaseInfoType[]> => {
   const { id, name = '新场景', param: sceneReqParam = '{}', responseConf, mockItemId, iteration } = param;
-  const mockApiPath = memoryMockConf.id2ApiAndType[mockItemId].api;
+  const { api: apiDirName, type: mockType } = memoryData.memoryMockConf.id2ApiAndType[mockItemId];
+  const mockApiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
   const scenesConf = await getMockItemSceneListConf(mockApiPath);
-  const sceneItemIdAndInfoPairList = memoryMockItemAndSceneItemListPair[mockItemId] || [];
+  const sceneItemIdAndInfoPairList = memoryData.memoryMockItemAndSceneItemListPair[mockItemId] || [];
   if (!scenesConf[id]) {
-    sceneItemIdAndInfoPairList.unshift({ id, name, param: sceneReqParam });
+    sceneItemIdAndInfoPairList.unshift({ id, name, param: sceneReqParam, iteration });
   }
+
+  if (Object.keys(memoryData.memoryMockItemAndSceneItemConf[mockType] ?? {}).length === 0) {
+    memoryData.memoryMockItemAndSceneItemConf[mockType] = {};
+  }
+  memoryData.memoryMockItemAndSceneItemConf[mockType][apiDirName] = sceneItemIdAndInfoPairList.reduce((tmpRes, next) => {
+    tmpRes[next.id] = next;
+    return tmpRes;
+  }, {});
+
   scenesConf[id] = { name, param: sceneReqParam, iteration };
+  console.log('someiiiiiiiii', memoryData.memoryMockItemAndSceneItemConf, scenesConf, sceneItemIdAndInfoPairList);
   const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenesConf.json'), scenesConf);
   await fse.outputFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenes', `${id}.ts`), responseConf ?? '');
   assert(writeSceneConfRes, 'save sceneItem failed');
+  memoryData.memoryMockItemAndSceneItemListPair[mockItemId] = sceneItemIdAndInfoPairList;
   return sceneItemIdAndInfoPairList;
 };
 
 // 删除mockItem的scene
 export const handleDeleteSceneItem = async (param: { sceneId: string, mockItemId: string }): Promise<SceneItemBaseInfoType[]> => {
   const { mockItemId, sceneId } = param;
-  const mockApiPath = memoryMockConf.id2ApiAndType[mockItemId].api;
-  const sceneItemIdAndInfoPairList = memoryMockItemAndSceneItemListPair[mockItemId];
+  const mockApiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
+  const sceneItemIdAndInfoPairList = memoryData.memoryMockItemAndSceneItemListPair[mockItemId];
   const scenesConf = await getMockItemSceneListConf(mockApiPath);
   assert(mockApiPath, 'not fond apiPath in dir');
   const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenesConf.json'), scenesConf);
@@ -204,7 +220,7 @@ export const handleDeleteSceneItem = async (param: { sceneId: string, mockItemId
 // 获取SceneItem的返回值配置
 export const getSceneItemResponseConf = async (param: { mockItemId: string, sceneId: string }): Promise<string> => {
   const { mockItemId, sceneId } = param;
-  const apiPath = memoryMockConf.id2ApiAndType[mockItemId].api;
+  const apiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
   const file = await readLocalFile(path.join(projectRootDir, 'mock', apiPath, 'scenes', `${sceneId}.ts`));
   return file;
 };
@@ -212,7 +228,7 @@ export const getSceneItemResponseConf = async (param: { mockItemId: string, scen
 // 选中mockItem的scene
 export const handleSelectSceneItem = async (param: { mockItemId: string, sceneId: string }): Promise<any> => {
   const { mockItemId, sceneId } = param;
-  const mockApiPath = memoryMockConf.id2ApiAndType[mockItemId].api;
-  memoryMockConf.api2IdAndCheckedScene[mockApiPath].selectedSceneId = sceneId;
-  return await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryMockConf);
+  const mockApiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
+  memoryData.memoryMockConf.api2IdAndCheckedScene[mockApiPath].selectedSceneId = sceneId;
+  return await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
 };
