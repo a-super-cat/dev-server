@@ -1,6 +1,6 @@
 {
   "name": "@jiazhiwei/dev-server",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
@@ -15,7 +15,8 @@
     "prev": "node ./dist/index.js",
     "build": "rollup --config rollup.config.ts --configPlugin swc3",
     "lint": "eslint src/**",
-    "postinstall": "node ./cpWebFile.cjs"
+    "postinstall": "node ./cp-web-file.cjs",
+    "prepublish": "node ./pre-publish.cjs"
   },
   "keywords": [],
   "author": "",
