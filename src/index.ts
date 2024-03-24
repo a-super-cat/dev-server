@@ -12,9 +12,6 @@ import type { ServerResponse, IncomingMessage } from 'node:http';
 const _dirname = join(fileURLToPath(import.meta.url), '../');
 const localIps = ['::1', '127.0.0.1'];
 
-const apiServerPort = 3000;
-const webSocketPort = 3001;
-
 let wsServer: any;
 
 const messageStatusPair: any = {};
@@ -60,7 +57,7 @@ const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes:
   resolve(messageRes);
 };
 
-const httpWorker = fork(join(_dirname, './server/service/httpWorkerService.js'));
+const httpWorker = fork(join(_dirname, './server/service/httpWorkerService.js'), [], { env: process.env });
 httpWorker.on('message', (msg: any) => {
   const { messageId } = msg;
   messageStatusPair?.[messageId]?.(msg);
@@ -78,16 +75,17 @@ const handleHttpWorkerRequest = async (arg: any, memoryData, response: ServerRes
 
 
 export const startMockServer = (config: any): void => {
+  const { serverPort, wsServerPort } = process.env as any;
   // websocket服务
-  wsServer = new WebSocketServer({ port: webSocketPort });
+  wsServer = new WebSocketServer({ port: wsServerPort });
   wsServer.on('listening', () => {
-    console.log(chalk.green(`WebSocket Server running at ws://localhost:${webSocketPort}/`));
+    console.log(chalk.green(`WebSocket Server running at ws://localhost:${wsServerPort}/`));
   });
   wsServer.on('connection', (ws) => {
     console.log(chalk.green('WebSocket Server connected'));
   });
 
-  const mockServer = startServer(apiServerPort);
+  const mockServer = startServer(serverPort);
 
   mockServer.on('request', (req, res) => {
     const parsedUrl = new URL(req.url ?? '', `http://${req.headers.host}`);

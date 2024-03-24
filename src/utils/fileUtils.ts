@@ -7,25 +7,27 @@ import { asyncFilter } from '@/utils/commonUtils';
 import { assert } from 'node:console';
 
 // 项目根路径
-export let projectRootDir: string = '';
+export const projectRootDir: string = process.env.mockServerWorkDir ?? process.cwd();
+// mock文件夹路径
+export const mockDirName: string = process.env.mockDir ?? 'mock';
 
 // devserver根路径
 export const devServerRootDir = path.join(fileURLToPath(import.meta.url), '../../../');
 
 // 获取项目根路径
-export const findProjectRootDir = (dir = fileURLToPath(import.meta.url)):string => {
-  let tmpPath: string = dir;
+// export const findProjectRootDir = (dir = fileURLToPath(import.meta.url)):string => {
+//   let tmpPath: string = dir;
 
-  while(!fse.pathExistsSync(path.join(tmpPath, 'package.json'))) {
-    tmpPath = path.normalize(`${tmpPath}../`);
-  }
+//   while(!fse.pathExistsSync(path.join(tmpPath, 'package.json'))) {
+//     tmpPath = path.normalize(`${tmpPath}../`);
+//   }
 
-  projectRootDir = tmpPath;
-  return projectRootDir;
-};
+//   projectRootDir = tmpPath;
+//   return projectRootDir;
+// };
 
 // 初始化项目根路径
-findProjectRootDir();
+// findProjectRootDir();
 
 // ---------------------文件操作-----------------------
 // 判断文件是否存在
@@ -71,7 +73,7 @@ export const getDirSubList = async (dirPath: string, options: { onlyDir?: boolea
 
 // 获取mock文件夹列表
 export const getMockApiSubDirList = async (): Promise<string[]> => {
-  const dirList = await getDirSubList(path.join(projectRootDir, 'mock'), { onlyDir: true });
+  const dirList = await getDirSubList(path.join(projectRootDir, mockDirName), { onlyDir: true });
   return dirList;
 };
 

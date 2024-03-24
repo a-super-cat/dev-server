@@ -6,6 +6,7 @@ import {
   move,
   getDirSubList,
   readLocalFile,
+  mockDirName,
 } from '@/utils/fileUtils';
 import { 
   readObjectFromJsonFile, 
@@ -56,9 +57,9 @@ export const getAppMockConf = async (): Promise<any> => {
     // 获取mockItem的scene列表的配置
     const scenesConf = await getMockItemSceneListConf(mockApiPath);
     // 获取mockItem的scene文件列表
-    const scenesFileList = await getDirSubList(path.join(projectRootDir, 'mock', mockApiPath, 'scenes'), { onlyFile: true });
+    const scenesFileList = await getDirSubList(path.join(projectRootDir, mockDirName, mockApiPath, 'scenes'), { onlyFile: true });
     // 获取mockItem的基本信息
-    const mockItemBaseInfo = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'baseConf.json')) as MockItemBaseInfoType;
+    const mockItemBaseInfo = await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, mockApiPath, 'baseConf.json')) as MockItemBaseInfoType;
     const scenesBaseInfoList = scenesFileList.map(fileName => {
       const sceneId = fileName.replace(/.ts$/, '');
       return { id: sceneId, ...scenesConf[sceneId] };
@@ -105,13 +106,13 @@ export const getMockItemAndSceneItemConf = async ():Promise<MemoryMockItemAndSce
 
 // 保存迭代列表
 export const handleSaveIterationList = async (param: string[]): Promise<boolean> => {
-  const tmp = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'));
+  const tmp = await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'));
   tmp.iterationList = param;
-  return await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), tmp);
+  return await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), tmp);
 };
 // 获取迭代列表
 export const handleGetIterationList = async (): Promise<string[]> => {
-  const tmp = await readObjectFromJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'));
+  const tmp = await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'));
   return tmp.iterationList || [];
 };
 
@@ -140,7 +141,7 @@ export const handleAddOrUpdateMockItemConf = async (param: MockItemParam): Promi
       console.log('whichChange', whichChange, param, memoryData.memoryMockItemIdAndApiPairList);
       assert(whichChange !== -1, 'mockItem id not found');
       memoryData.memoryMockItemIdAndApiPairList[whichChange].apiPath = apiAlbumPath;
-      await move(path.join(projectRootDir, 'mock', originPath), path.join(projectRootDir, 'mock', apiAlbumPath));
+      await move(path.join(projectRootDir, mockDirName, originPath), path.join(projectRootDir, mockDirName, apiAlbumPath));
     } else {
       memoryData.memoryMockItemIdAndApiPairList.unshift({ id, apiPath: apiAlbumPath, type: mockRequestType });
     }
@@ -152,9 +153,9 @@ export const handleAddOrUpdateMockItemConf = async (param: MockItemParam): Promi
     memoryData.memoryMockConf.id2ApiAndType[id] = { api: apiAlbumPath, type: mockRequestType };
     memoryData.memoryMockConf.api2IdAndCheckedScene[apiAlbumPath] = { ...oldConf, id, remarks, mockPattern };
     // 当mockConf发生变化时，memoryMockItemIdAndApiPairList也要进行更新
-    await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
+    await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), memoryData.memoryMockConf);
   }
-  const res = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', apiAlbumPath, 'baseConf.json'), param);
+  const res = await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, apiAlbumPath, 'baseConf.json'), param);
   assert(res, 'save mockItem failed');
   return true;
 };
@@ -164,11 +165,10 @@ export const handleDeleteMockItem = async (param: { id: string }): Promise<any> 
   const { id } = param;
   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
   delete memoryData.memoryMockConf[id];
-  await fse.remove(path.join(projectRootDir, 'mock', memoryData.memoryMockConf.id2ApiAndType[id].api));
+  await fse.remove(path.join(projectRootDir, mockDirName, memoryData.memoryMockConf.id2ApiAndType[id].api));
   const i = memoryData.memoryMockItemIdAndApiPairList.findIndex((item) => item.id === id);
   i > -1 && memoryData.memoryMockItemIdAndApiPairList.splice(i, 1);
-  console.log('some 555555555', memoryData.memoryMockConf);
-  await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
+  await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), memoryData.memoryMockConf);
   return true;
 };
 
@@ -192,9 +192,8 @@ export const handleAddOrUpdateSceneItem = async (param: SceneItemParam): Promise
   }, {});
 
   scenesConf[id] = { name, param: sceneReqParam, iteration };
-  console.log('someiiiiiiiii', memoryData.memoryMockItemAndSceneItemConf, scenesConf, sceneItemIdAndInfoPairList);
-  const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenesConf.json'), scenesConf);
-  await fse.outputFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenes', `${id}.ts`), responseConf ?? '');
+  const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, mockApiPath, 'scenesConf.json'), scenesConf);
+  await fse.outputFile(path.join(projectRootDir, mockDirName, mockApiPath, 'scenes', `${id}.ts`), responseConf ?? '');
   assert(writeSceneConfRes, 'save sceneItem failed');
   memoryData.memoryMockItemAndSceneItemListPair[mockItemId] = sceneItemIdAndInfoPairList;
   return sceneItemIdAndInfoPairList;
@@ -207,13 +206,14 @@ export const handleDeleteSceneItem = async (param: { sceneId: string, mockItemId
   const sceneItemIdAndInfoPairList = memoryData.memoryMockItemAndSceneItemListPair[mockItemId];
   const scenesConf = await getMockItemSceneListConf(mockApiPath);
   assert(mockApiPath, 'not fond apiPath in dir');
-  const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, 'mock', mockApiPath, 'scenesConf.json'), scenesConf);
+  const writeSceneConfRes = await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, mockApiPath, 'scenesConf.json'), scenesConf);
   assert(writeSceneConfRes, 'save sceneItem failed');
   // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
   delete scenesConf[sceneId];
   const i = sceneItemIdAndInfoPairList.findIndex((item) => item.id === sceneId);
   sceneItemIdAndInfoPairList.splice(i, 1);
-  await fse.remove(path.join(projectRootDir, 'mock', mockApiPath, 'scenes', `${sceneId}.ts`));
+  await fse.remove(path.join(projectRootDir, mockDirName, mockApiPath, 'scenes', `${sceneId}.ts`));
+  memoryData.memoryMockItemAndSceneItemListPair[mockItemId] = sceneItemIdAndInfoPairList;
   return sceneItemIdAndInfoPairList;
 };
 
@@ -221,7 +221,7 @@ export const handleDeleteSceneItem = async (param: { sceneId: string, mockItemId
 export const getSceneItemResponseConf = async (param: { mockItemId: string, sceneId: string }): Promise<string> => {
   const { mockItemId, sceneId } = param;
   const apiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
-  const file = await readLocalFile(path.join(projectRootDir, 'mock', apiPath, 'scenes', `${sceneId}.ts`));
+  const file = await readLocalFile(path.join(projectRootDir, mockDirName, apiPath, 'scenes', `${sceneId}.ts`));
   return file;
 };
 
@@ -230,5 +230,5 @@ export const handleSelectSceneItem = async (param: { mockItemId: string, sceneId
   const { mockItemId, sceneId } = param;
   const mockApiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
   memoryData.memoryMockConf.api2IdAndCheckedScene[mockApiPath].selectedSceneId = sceneId;
-  return await writeObjectToJsonFile(path.join(projectRootDir, 'mock', 'mockConf.json'), memoryData.memoryMockConf);
+  return await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), memoryData.memoryMockConf);
 };

@@ -3,13 +3,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import assert from 'assert';
 import JSON5 from 'json5';
-import { projectRootDir } from '@/utils/fileUtils';
+import { projectRootDir, mockDirName } from '@/utils/fileUtils';
 import type { MemoryDataType } from '@/server/service/mainService';
 
 const getSceneItemResponseConf = (apiSceneConfObj: any, param: any): string => {
   const requestParamKeys = Object.keys(param || {});
   const sceneScoreList = Object.values(apiSceneConfObj || {}).map((sceneConf: any) => {
-    console.log('some=======', sceneConf);
     const { param: sceneParam, id } = sceneConf;
     const sceneParamObj = JSON5.parse(sceneParam);
     let score = 0;
@@ -32,7 +31,6 @@ process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataT
   const { apiPath, param, messageId } = arg;
   const { memoryMockConf: mockConf, memoryMockItemAndSceneItemConf, memoryMockItemAndSceneItemListPair } = memoryData;
 
-  console.log('some00009999999', memoryData);
   const currentMatchedMockItem = mockConf.api2IdAndCheckedScene[apiPath];
   try {
     assert(currentMatchedMockItem, 'apiPath not found');
@@ -45,7 +43,7 @@ process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataT
     const matchedSceneItem = memoryMockItemAndSceneItemListPair?.[currentMatchedMockItem.id]?.find(item => item.id === selectedSceneId);
 
     // const requestResponseConfFile = 
-    const filePath = path.join(projectRootDir, 'mock', apiPath, 'scenes', `${selectedSceneId}.ts`);
+    const filePath = path.join(projectRootDir, mockDirName, apiPath, 'scenes', `${selectedSceneId}.ts`);
     const res = ts.transpileModule(fs.readFileSync(filePath, 'utf8'), {
       compilerOptions: {
         module: ts.ModuleKind.ESNext,

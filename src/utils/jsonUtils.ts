@@ -3,6 +3,7 @@ import {
   touchFile,
   getMockApiSubDirList,
   projectRootDir,
+  mockDirName,
 } from '@/utils/fileUtils';
 import type { MockConfigObj, JsonObj } from '@/types/basic';
 import type { JFWriteOptions } from 'jsonfile';
@@ -32,7 +33,7 @@ export const writeObjectToJsonFile = async (filePath: string, obj: any, option: 
 
 // 初始化 请求的配置(api和id以及api类型的对应关系)
 export const initMockConf = async ():Promise<[RequestItemLocalConf[], MockConfigObj]> => {
-  const configPath = path.join(projectRootDir, 'mock', 'mockConf.json');
+  const configPath = path.join(projectRootDir, mockDirName, 'mockConf.json');
   const mockConf = await readObjectFromJsonFile(configPath) as MockConfigObj;
   if(Object.keys(mockConf).length === 0) {
     mockConf.id2ApiAndType = {};
@@ -54,5 +55,5 @@ export const initMockConf = async ():Promise<[RequestItemLocalConf[], MockConfig
 
 // 获取具体mockItem项的scene列表的配置（key为sceneId，value为对象包含scene的名称及参数）
 export const getMockItemSceneListConf = async (apiPath: string ): Promise<JsonObj> => {
-  return await readObjectFromJsonFile(path.join(projectRootDir, 'mock', apiPath, 'scenesConf.json'));
+  return await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, apiPath, 'scenesConf.json'));
 };
