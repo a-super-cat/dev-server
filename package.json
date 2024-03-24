@@ -1,20 +1,16 @@
 {
   "name": "@jiazhiwei/dev-server",
-  "version": "1.0.13",
+  "version": "1.0.14",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
   "files": [
     "web",
     "dist",
-    "bin",
-    "cp-web-file.cjs"
+    "bin"
   ],
   "bin": {
-    "mock": {
-      "win32": "cp-web-file.cjs",
-      "default": "mock"
-    }
+    "mock": "bin/mock"
   },
   "scripts": {
     "dev": "rollup --config rollup.config.ts --configPlugin swc3 -w",
