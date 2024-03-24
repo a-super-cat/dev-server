@@ -1,13 +1,13 @@
 {
   "name": "@jiazhiwei/dev-server",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
   "files": [
     "web",
     "dist",
-    "cpWebFile.cjs"
+    "cp-web-file.cjs"
   ],
   "scripts": {
     "dev": "rollup --config rollup.config.ts --configPlugin swc3 -w",
