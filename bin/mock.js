@@ -25,4 +25,4 @@ Object.keys(mockConf).forEach(key => {
   process.env[key] = mockConf[key];
 });
 process.env.mockServerWorkDir = mockServerWorkDir;
-// startMockServer();
+startMockServer();
