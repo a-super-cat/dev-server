@@ -28,6 +28,9 @@ jobs:
     - name: Build
       run: pnpm run build
 
+    - name: Remove scripts
+      run: pnpm run prepublish
+
     - name: Publish to npm
       uses: JS-DevTools/npm-publish@v3.1.0
       with:
