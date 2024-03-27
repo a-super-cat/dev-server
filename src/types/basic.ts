@@ -1,8 +1,8 @@
 import { type mockPatternList, type apiTypeList, type requestMethodList } from '@/utils/constants';
 
-type apiType = typeof apiTypeList[number];
-type mockPatternType = typeof mockPatternList[number];
-type requestMethodType = typeof requestMethodList[number];
+export type apiType = typeof apiTypeList[number];
+export type mockPatternType = typeof mockPatternList[number];
+export type requestMethodType = typeof requestMethodList[number];
 
 export type MockItemBaseInfoType = {
   id: string;

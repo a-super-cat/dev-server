@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "mock-server-config",
+   "type":"object",
+   "properties": {
+      "serverPort": {
+        "type": "integer",
+        "default": 3000,
+        "description": "the mock-server web server and http(s) port default is 3000"
+      },
+      "wsServerPort": {
+        "type": "integer",
+        "default": 3001,
+        "description": "web socket port used for server push message default is 3001"
+      },
+      "mockDir": {
+        "type": "string",
+        "default": "mock",
+        "description": "the folder to store mock file and config default is ./mock"
+      },
+      "https": {
+        "type": "boolean",
+        "default": false,
+        "description": "is use https default is false"
+      },
+      "proxy": {
+        "type": "object",
+        "patternProperties": {
+          "^[a-zA-Z0-9_/]": {
+            "type": "object",
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "the target url"
+              },
+              "changeOrigin": {
+                "type": "boolean",
+                "default": true,
+                "description": "change the origin of the host header to the target URL"
+              },
+              "deletePrefix": {
+                "type": "boolean",
+                "default": true
+              },
+              "auth": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "the path to the auth url"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "propMap": {
+                    "type": "object",
+                    "description": "map the configured auth property name to the request field name",
+                    "examples": [
+                      {
+                        "username": "user",
+                        "password": "pwd"
+                      }
+                    ]
+                  },
+                  "authCodePath": {
+                    "type": "string",
+                    "description": "the path of res to the auth code",
+                    "examples": ["data.token"]
+                  },
+                  "authRequest": {
+                    "type": "object",
+                    "properties": {
+                       "type": {
+                          "type": "string",
+                          "description": "the way to set auth info, can be 'header' or 'body' default is 'header'",
+                          "enum": ["header", "query"],
+                          "default": "header"
+                       },
+                       "key": {
+                          "type": "string",
+                          "description": "the key to set auth info",
+                          "examples": ["Authorization", "token"],
+                          "default": "Authorization"
+                       },
+                       "pattern": {
+                          "type": "string",
+                          "description": "the pattern to set auth info",
+                          "examples": [
+                            "Bearer ${token}",
+                            "token=${token}"
+                          ]
+                       }
+                    },
+                    "required": ["pattern"]
+                  }
+                },
+                "required": ["authCodePath"]
+              }
+            },
+            "required": ["target"],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+   }
+}

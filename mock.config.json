@@ -1,0 +1,22 @@
+{
+  "$schema": "./mock-config-schema.json",
+  "serverPort": 3000,
+  "proxy": {
+    "/test": {
+      "target": "http://iems-dev.iyunang.com/",
+      "auth": {
+        "path": "/api/login",
+        "username": "yunang1",
+        "password": "f78064fd2204e346f087ab17d882a8de",
+        "authCodePath": "data.token",
+        "authRequest": {
+          "key": "Authorization",
+          "pattern": "Bearer ${token}"
+        }
+      }
+    },
+    "/loc": {
+      "target": "http://localhost:3002/"
+    }
+  }
+}

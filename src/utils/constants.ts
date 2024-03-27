@@ -6,3 +6,6 @@ export const requestMethodList = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] as co
 
 // 接口类型
 export const apiTypeList = ['HTTP', 'JSON-RPC'] as const;
+
+// 本地IP地址
+export const localIps = ['::1', '127.0.0.1'];

@@ -40,7 +40,7 @@ export const initMockConf = async ():Promise<[RequestItemLocalConf[], MockConfig
     mockConf.api2IdAndCheckedScene = {};
   }
   const mockApiDirList = await getMockApiSubDirList();
-  console.log('mockApiDirList', mockApiDirList);
+
   const apiAndIdPair = [] as RequestItemLocalConf[];
   mockApiDirList.forEach(apiPath => {
     if(mockConf.api2IdAndCheckedScene[apiPath].id) {

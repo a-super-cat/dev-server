@@ -8,9 +8,10 @@ import chalk from 'chalk';
 import c, { fork } from 'node:child_process';
 import { v4 as uuid } from 'uuid';
 import type { ServerResponse, IncomingMessage } from 'node:http';
+import { proxyRequest } from '@/proxyServer/httpProxyServer';
+import { localIps } from '@/utils/constants';
 
 const _dirname = join(fileURLToPath(import.meta.url), '../');
-const localIps = ['::1', '127.0.0.1'];
 
 let wsServer: any;
 
@@ -74,8 +75,8 @@ const handleHttpWorkerRequest = async (arg: any, memoryData, response: ServerRes
 };
 
 
-export const startMockServer = (config: any): void => {
-  const { serverPort, wsServerPort } = process.env as any;
+export const startMockServer = (proxyInfo: any): void => {
+  const { mockServerPort: serverPort, mockServerWsPort: wsServerPort } = process.env as any;
   // websocket服务
   wsServer = new WebSocketServer({ port: wsServerPort });
   wsServer.on('listening', () => {
@@ -109,16 +110,32 @@ export const startMockServer = (config: any): void => {
         }, {});
       } else {
       // 根据请求头的Content-Type处理请求体
-        switch (req.headers['content-type']) {
-          case 'application/json':
+        switch (true) {
+          case req.headers['content-type']?.includes('application/json'):
             param = JSON.parse(requestBodyStr);
             break;
-          case 'application/x-www-form-urlencoded':
+          case req.headers['content-type']?.includes('application/x-www-form-urlencoded'):
             {
             // 处理URL编码格式的请求体
               const dataAsObject = new URLSearchParams(requestBodyStr);
-              console.log(Object.fromEntries(dataAsObject));
-              res.end('Received URL-encoded data');
+              param = Object.fromEntries(dataAsObject);
+            }
+            break;
+          case req.headers['content-type']?.includes('multipart/form-data'):
+            {
+            // 处理multipart/form-data格式的请求体
+              const boundary = req.headers['content-type']?.split('boundary=')[1];
+              const dataAsObject = requestBodyStr?.split(boundary ?? '')?.reduce((rsObj: any, part) => {
+                if (part.includes('filename')) {
+                  const filename = (part.match(/filename="(.*)"/) ?? [])?.[1];
+                  rsObj.filename = filename;
+                } else {
+                  const key = (part.match(/name="(.*)"/) ?? [])?.[1];
+                  rsObj[key] = part.split('\r\n').slice(2, -2).join('\r\n');
+                }
+                return rsObj;
+              }, {});
+              param = dataAsObject;
             }
             break;
           default:
@@ -130,7 +147,6 @@ export const startMockServer = (config: any): void => {
       const paths: string[] = apiPath.split('/');
       paths[0] === '' && paths.shift();
       paths[paths.length - 1] === '' && paths.pop();
-      const formattedPath = paths.length ? paths.join('.') : apiPath;
       switch (true) {
         case /^\/?mock-system\/.*/.test(apiPath):
           handleSystemRequest(apiPath, param, res);
@@ -145,8 +161,40 @@ export const startMockServer = (config: any): void => {
           break;
         default:
           {
-            const messageId = uuid();
-            handleHttpWorkerRequest({ apiPath: formattedPath, param, messageId }, getMemoryData(), res).catch(console.error);
+            // 这个路径是删除掉prefix的路径
+            let purifiedApiPath = apiPath;
+            const memoryData = getMemoryData();
+            const matchedProxy = proxyInfo.find((i) => apiPath.startsWith(i.prefix) || apiPath.startsWith(`/${i.prefix}`));
+            if (Object.keys(matchedProxy || {}).length > 0) {
+              purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
+            }
+            const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
+            // 是否要走代理及是否要创建mock数据
+            let isNeedProxy, isNeedCreateMock;
+            if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
+              isNeedProxy = false;
+              isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
+            } else {
+              const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene[purifiedFormattedPath].mockPattern;
+              isNeedProxy = thisMockItemMockPattern.startsWith('request') || memoryData.isCreateMockItemFromRequest;
+              isNeedCreateMock = thisMockItemMockPattern.endsWith('create') || memoryData.isCreateMockItemFromRequest;
+            }
+            if (!isNeedProxy && !isNeedCreateMock) {
+              const messageId = uuid();
+              handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
+            } else if (matchedProxy.target && isNeedProxy) {
+              const info2CreateMockItemFromRequest = {
+                apiPath,
+                param,
+                mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]?.id ?? uuid(),
+                isCreateMockItemFromRequest: isNeedCreateMock,
+              };
+
+              proxyRequest({ ...matchedProxy, authInfo: memoryData.authInfo[matchedProxy.prefix] }, requestBodyStr, req, res, info2CreateMockItemFromRequest, wsServer);
+            } else {
+              res.statusCode = 404;
+              res.end();
+            }
           }
           break;
       }

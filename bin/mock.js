@@ -8,6 +8,7 @@ const defaultMockConf = {
   wsServerPort: 3001,
   mockDir: 'mock',
   https: false,
+  proxyList: [],
 };
 
 const mockServerWorkDir = process.cwd();
@@ -21,8 +22,10 @@ try {
   mockConf = defaultMockConf;
 }
 
-Object.keys(mockConf).forEach(key => {
-  process.env[key] = mockConf[key];
-});
+process.env.mockServerPort = mockConf.serverPort;
+process.env.mockServerWsPort = mockConf.wsServerPort;
+process.env.mockDir = mockConf.mockDir;
+process.env.mockServerIsHttps = mockConf.https;
 process.env.mockServerWorkDir = mockServerWorkDir;
-startMockServer();
+const proxyInfo = Object.keys(mockConf.proxy || {}).map((key) => ({ ...mockConf.proxy[key], prefix: key }));
+startMockServer(proxyInfo);

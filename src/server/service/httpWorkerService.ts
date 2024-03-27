@@ -8,6 +8,7 @@ import type { MemoryDataType } from '@/server/service/mainService';
 
 const getSceneItemResponseConf = (apiSceneConfObj: any, param: any): string => {
   const requestParamKeys = Object.keys(param || {});
+  assert(Object.values(apiSceneConfObj ?? {}).length > 0, 'this api does not has any scene');
   const sceneScoreList = Object.values(apiSceneConfObj || {}).map((sceneConf: any) => {
     const { param: sceneParam, id } = sceneConf;
     const sceneParamObj = JSON5.parse(sceneParam);
