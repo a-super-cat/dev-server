@@ -59,6 +59,8 @@ export const changeIsCreateMockItemFromRequestStatus = (): boolean => {
   return memoryData.isCreateMockItemFromRequest;
 };
 
+export const getFlagForIsCreateMockItemFromRequest = (): boolean => memoryData.isCreateMockItemFromRequest;
+
 // 获取mock的全量配置（搜索建立在此基础上）
 export const getAppMockConf = async (): Promise<any> => {
   await getMockItemConfData();

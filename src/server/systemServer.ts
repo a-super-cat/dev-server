@@ -9,6 +9,7 @@ import {
   handleSaveIterationList,
   handleGetIterationList,
   changeIsCreateMockItemFromRequestStatus,
+  getFlagForIsCreateMockItemFromRequest,
 } from '@/server/service/mainService';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { AppMockConfType } from '@/types/basic';
@@ -84,6 +85,8 @@ const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
     // 是否从请求中创建mockItem
     case '/mock-system/isCreateMockItemFromRequest':
       return changeIsCreateMockItemFromRequestStatus();
+    case '/mock-system/flagForIsCreateMockItemFromRequest':
+      return getFlagForIsCreateMockItemFromRequest();
     // 搜索mockItem
     case '/mock-system/search':
       return await handleSearch(param);
