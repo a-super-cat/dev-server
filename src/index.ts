@@ -46,7 +46,7 @@ const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes:
   const { data, mockItemId, matchedScene, success } = messageRes;
   response.setHeader('Content-Type', 'text/plain; charset=utf-8');
   const statusCode = success ? 200 : 500;
-  response.write(JSON.stringify({ code: statusCode, data, msg: success ? 'success' : 'fail' }));
+  response.write(JSON.stringify(data));
   response.statusCode = statusCode;
   response.end();
   wsServer?.clients?.forEach((client: any) => {
@@ -179,6 +179,7 @@ export const startMockServer = (proxyInfo: any): void => {
               isNeedProxy = thisMockItemMockPattern.startsWith('request') || memoryData.isCreateMockItemFromRequest;
               isNeedCreateMock = thisMockItemMockPattern.endsWith('create') || memoryData.isCreateMockItemFromRequest;
             }
+
             if (!isNeedProxy && !isNeedCreateMock) {
               const messageId = uuid();
               handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
