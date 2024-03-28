@@ -172,7 +172,7 @@ export const startMockServer = (proxyInfo: any): void => {
             // 是否要走代理及是否要创建mock数据
             let isNeedProxy, isNeedCreateMock;
             if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
-              isNeedProxy = false;
+              isNeedProxy = true;
               isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
             } else {
               const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene[purifiedFormattedPath].mockPattern;

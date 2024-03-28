@@ -13,7 +13,8 @@ import assert from 'assert';
 export const proxyRequest = (proxyInfo: any, body: string, req: http.IncomingMessage, res: http.ServerResponse, createMockConfOptions: any, wsServer: any): void => {
   const { prefix, target, changeOrigin = true, deletePrefix = true, auth = {}, authInfo = {} } = proxyInfo;
   const { apiPath, param, mockItemId, isCreateMockItemFromRequest } = createMockConfOptions;
-  const { authType = 'header', auth: authorizedInfo = {} } = authInfo;
+  // eslint-disable-next-line no-template-curly-in-string
+  const { authType = 'header', auth: authorizedInfo = { Authorization: 'Bearer ${token}' } } = authInfo;
   const formattedApiPath = apiPath?.startsWith(prefix) ? apiPath?.replace(prefix, '') : apiPath?.replace(`/${prefix}`, '');
   let reqPath = req.url;
   // 如果是query方式，将授权信息拼接到url上
