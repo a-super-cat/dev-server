@@ -124,6 +124,8 @@ pnpm mock
 
 [![readme.jpg](https://i.postimg.cc/DzvJPRzs/readme.jpg)](https://postimg.cc/zyQGJtKX)
 
+### 补充：
+可以不选择任何场景，此时会根据接口的参数以及场景配置的参数来进行匹配，返回最符合请求参数的场景中配置的返回值，如果有多个匹配，则返回匹配到的第一个（最近添加的那个）
 
 
 ## 其他
