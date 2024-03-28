@@ -44,6 +44,7 @@
               },
               "auth": {
                 "type": "object",
+                "description": "the auth config for how to set authorization info to the target url",
                 "properties": {
                   "path": {
                     "type": "string",
