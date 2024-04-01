@@ -10,6 +10,8 @@ import { v4 as uuid } from 'uuid';
 import type { ServerResponse, IncomingMessage } from 'node:http';
 import { proxyRequest } from '@/proxyServer/httpProxyServer';
 import { localIps } from '@/utils/constants';
+import { PeekObjectFromStream } from '@/stream/PeekObjectFromStream';
+import { DoNothingWriteAbleStream } from '@/stream/DoNothingWriteAbleStream';
 
 const _dirname = join(fileURLToPath(import.meta.url), '../');
 
@@ -46,7 +48,7 @@ const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes:
   const { data, mockItemId, matchedScene, success } = messageRes;
   response.setHeader('Content-Type', 'text/plain; charset=utf-8');
   const statusCode = success ? 200 : 500;
-  response.write(JSON.stringify(data));
+  response.write(data);
   response.statusCode = statusCode;
   response.end();
   wsServer?.clients?.forEach((client: any) => {
@@ -92,114 +94,87 @@ export const startMockServer = (proxyInfo: any): void => {
     const parsedUrl = new URL(req.url ?? '', `http://${req.headers.host}`);
     const apiPath: string = parsedUrl.pathname;
     const apiQuery = parsedUrl.searchParams;
-    let requestBodyStr = '';
     let param;
-  
-    req.on('data', (thunk) => {
-      if (Buffer.isBuffer(thunk)) {
-        requestBodyStr += thunk.toString();
-      } else {
-        requestBodyStr += thunk;
-      }
-    });
-    req.on('end', () => {
-      if(req.method === 'GET') {
-        param = [...apiQuery.keys()].reduce((rsObj, key) => {
-          rsObj[key] = apiQuery.get(key);
-          return rsObj;
-        }, {});
-      } else {
-      // 根据请求头的Content-Type处理请求体
-        switch (true) {
-          case req.headers['content-type']?.includes('application/json'):
-            param = JSON.parse(requestBodyStr);
-            break;
-          case req.headers['content-type']?.includes('application/x-www-form-urlencoded'):
-            {
-            // 处理URL编码格式的请求体
-              const dataAsObject = new URLSearchParams(requestBodyStr);
-              param = Object.fromEntries(dataAsObject);
-            }
-            break;
-          case req.headers['content-type']?.includes('multipart/form-data'):
-            {
-            // 处理multipart/form-data格式的请求体
-              const boundary = req.headers['content-type']?.split('boundary=')[1];
-              const dataAsObject = requestBodyStr?.split(boundary ?? '')?.reduce((rsObj: any, part) => {
-                if (part.includes('filename')) {
-                  const filename = (part.match(/filename="(.*)"/) ?? [])?.[1];
-                  rsObj.filename = filename;
-                } else {
-                  const key = (part.match(/name="(.*)"/) ?? [])?.[1];
-                  rsObj[key] = part.split('\r\n').slice(2, -2).join('\r\n');
-                }
+    const peekObjStream = new PeekObjectFromStream();
+
+    if(req.method !== 'GET') {
+      req.pipe(peekObjStream);
+    }
+
+    switch (true) {
+      case /^\/?mock-system\/.*/.test(apiPath):
+        // 系统请求
+        if (req.method === 'GET') {
+          param = [...apiQuery.keys()].reduce((rsObj, key) => {
+            rsObj[key] = apiQuery.get(key);
+            return rsObj;
+          }, {});
+
+          handleSystemRequest(apiPath, param, res);
+        } else {
+          const doNothing = new DoNothingWriteAbleStream();
+          peekObjStream.pipe(doNothing);
+          peekObjStream.on('parsed', (parsedObj) => {
+            handleSystemRequest(apiPath, parsedObj, res);
+          });
+        }
+        break;
+      case /^\/?mock-web\/.*/.test(apiPath) || apiPath === '/':
+        if (apiPath === '/') {
+          res.writeHead(302, { Location: '/mock-web/' });
+          res.end();
+        } else {
+          handleWebRequest(apiPath, res);
+        }
+        break;
+      default:
+        {
+          // 这个路径是删除掉prefix的路径
+          let purifiedApiPath = apiPath;
+          const memoryData = getMemoryData();
+          const matchedProxy = proxyInfo.find((i) => apiPath.startsWith(i.prefix) || apiPath.startsWith(`/${i.prefix}`));
+          if (Object.keys(matchedProxy || {}).length > 0) {
+            purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
+          }
+          const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
+          // 是否要走代理及是否要创建mock数据
+          let isNeedProxy, isNeedCreateMock;
+          if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
+            isNeedProxy = true;
+            isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
+          } else {
+            const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene[purifiedFormattedPath].mockPattern;
+            isNeedProxy = thisMockItemMockPattern.startsWith('request') || memoryData.isCreateMockItemFromRequest;
+            isNeedCreateMock = thisMockItemMockPattern.endsWith('create') || memoryData.isCreateMockItemFromRequest;
+          }
+
+          if (!isNeedProxy && !isNeedCreateMock) {
+            const messageId = uuid();
+            if (req.method === 'GET') {
+              param = [...apiQuery.keys()].reduce((rsObj, key) => {
+                rsObj[key] = apiQuery.get(key);
                 return rsObj;
               }, {});
-              param = dataAsObject;
-            }
-            break;
-          default:
-            console.log('other header: ', req.headers['content-type']);
-            break;
-        }
-      }
-
-      const paths: string[] = apiPath.split('/');
-      paths[0] === '' && paths.shift();
-      paths[paths.length - 1] === '' && paths.pop();
-      switch (true) {
-        case /^\/?mock-system\/.*/.test(apiPath):
-          handleSystemRequest(apiPath, param, res);
-          break;
-        case /^\/?mock-web\/.*/.test(apiPath) || apiPath === '/':
-          if (apiPath === '/') {
-            res.writeHead(302, { Location: '/mock-web/' });
-            res.end();
-          } else {
-            handleWebRequest(apiPath, res);
-          }
-          break;
-        default:
-          {
-            // 这个路径是删除掉prefix的路径
-            let purifiedApiPath = apiPath;
-            const memoryData = getMemoryData();
-            const matchedProxy = proxyInfo.find((i) => apiPath.startsWith(i.prefix) || apiPath.startsWith(`/${i.prefix}`));
-            if (Object.keys(matchedProxy || {}).length > 0) {
-              purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
-            }
-            const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
-            // 是否要走代理及是否要创建mock数据
-            let isNeedProxy, isNeedCreateMock;
-            if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
-              isNeedProxy = true;
-              isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
-            } else {
-              const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene[purifiedFormattedPath].mockPattern;
-              isNeedProxy = thisMockItemMockPattern.startsWith('request') || memoryData.isCreateMockItemFromRequest;
-              isNeedCreateMock = thisMockItemMockPattern.endsWith('create') || memoryData.isCreateMockItemFromRequest;
-            }
-
-            if (!isNeedProxy && !isNeedCreateMock) {
-              const messageId = uuid();
               handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
-            } else if (matchedProxy.target && isNeedProxy) {
-              const info2CreateMockItemFromRequest = {
-                apiPath,
-                param,
-                mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]?.id ?? uuid(),
-                isCreateMockItemFromRequest: isNeedCreateMock,
-              };
-
-              proxyRequest({ ...matchedProxy, authInfo: memoryData.authInfo[matchedProxy.prefix] }, requestBodyStr, req, res, info2CreateMockItemFromRequest, wsServer);
             } else {
-              res.statusCode = 404;
-              res.end();
+              peekObjStream.on('parsed', (parsedObj) => {
+                handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, parsedObj, messageId }, memoryData, res).catch(console.error);
+              });
             }
-          }
-          break;
-      }
+          } else if (matchedProxy.target && isNeedProxy) {
+            const info2CreateMockItemFromRequest = {
+              apiPath,
+              mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]?.id ?? uuid(),
+              isCreateMockItemFromRequest: isNeedCreateMock,
+            };
 
-    });
+            proxyRequest({ ...matchedProxy, authInfo: memoryData.authInfo[matchedProxy.prefix] }, peekObjStream, req, res, info2CreateMockItemFromRequest, wsServer);
+          } else {
+            res.statusCode = 404;
+            res.end();
+          }
+        }
+        break;
+    }
   });
 };

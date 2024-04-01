@@ -1,30 +1,26 @@
 import { Transform } from 'stream';
 import type { TransformCallback } from 'node:stream';
-import JSON5 from 'json5';
-import * as prettier from 'prettier';
 
-export class TransformResponse2MockConfig extends Transform {
+export class PeekObjectFromStream extends Transform {
+  private chunkStr = '';
   constructor() {
     super({ objectMode: true });
+    this.chunkStr = '';
     this.on('end', () => {
-
+      let rs;
+      try {
+        rs = JSON.parse(this.chunkStr ?? '{}');
+      } catch (error) {
+        rs = {};
+      }
+      this.emit('parsed', rs);
     });
   }
 
   _transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback): void{
-
-    const resObj = JSON.parse(chunk.toString(encoding));
-    const transformedChunk = `export default (param: any) => {
-      return ${JSON5.stringify(resObj, null, 2)};
-    }`;
-    prettier.format(transformedChunk, { parser: 'typescript' }).then((formattedMockConf) => {
-      this.push(formattedMockConf);
-      this.emit('parsed', resObj);
-      callback();
-    }).catch((err) => {
-      console.error(err);
-      callback();
-    });
+    this.chunkStr += chunk.toString();
+    this.push(chunk, encoding);
+    callback();
   }
 
   _flush(callback: TransformCallback): void {

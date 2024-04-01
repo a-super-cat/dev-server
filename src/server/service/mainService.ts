@@ -111,6 +111,8 @@ export const getAppMockConf = async (): Promise<any> => {
   };
 };
 
+await getAppMockConf();
+
 export const getMockItemAndSceneItemConf = async ():Promise<MemoryMockItemAndSceneItemConfType> => {
   await getAppMockConf();
   return memoryData.memoryMockItemAndSceneItemConf;
