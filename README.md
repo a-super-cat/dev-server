@@ -2,6 +2,12 @@
 
 [**For English**](https://github.com/a-super-cat/dev-server/blob/main/README.en.md "English Readme")
 
+## 特点
+
+* 返回值使用ts方法进行配置，可根据参数动态返回数据
+* 可从被代理的请求中创建mock的配置，更高效
+* 当不选择mock场景时，会根据参数自动寻找所有场景中最匹配的场景进行返回，在宽接口的场景下非常方便
+
 ## 1、安装
 
 **npm**
