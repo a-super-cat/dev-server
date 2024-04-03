@@ -27,5 +27,6 @@ process.env.mockServerWsPort = mockConf.wsServerPort;
 process.env.mockDir = mockConf.mockDir;
 process.env.mockServerIsHttps = mockConf.https;
 process.env.mockServerWorkDir = mockServerWorkDir;
+process.env.assetsManageWithGit = mockConf.assetsManageWithGit || false;
 const proxyInfo = Object.keys(mockConf.proxy || {}).map((key) => ({ ...mockConf.proxy[key], prefix: key }));
 startMockServer(proxyInfo);

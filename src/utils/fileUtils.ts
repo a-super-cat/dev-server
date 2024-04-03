@@ -11,23 +11,8 @@ export const projectRootDir: string = process.env.mockServerWorkDir ?? process.c
 // mock文件夹路径
 export const mockDirName: string = process.env.mockDir ?? 'mock';
 
-// devserver根路径
+// dev-server根路径
 export const devServerRootDir = path.join(fileURLToPath(import.meta.url), '../../../');
-
-// 获取项目根路径
-// export const findProjectRootDir = (dir = fileURLToPath(import.meta.url)):string => {
-//   let tmpPath: string = dir;
-
-//   while(!fse.pathExistsSync(path.join(tmpPath, 'package.json'))) {
-//     tmpPath = path.normalize(`${tmpPath}../`);
-//   }
-
-//   projectRootDir = tmpPath;
-//   return projectRootDir;
-// };
-
-// 初始化项目根路径
-// findProjectRootDir();
 
 // ---------------------文件操作-----------------------
 // 判断文件是否存在

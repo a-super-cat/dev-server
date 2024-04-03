@@ -10,6 +10,12 @@ import {
   handleGetIterationList,
   changeIsCreateMockItemFromRequestStatus,
   getFlagForIsCreateMockItemFromRequest,
+  handleSavePageSetting,
+  handleGetPageSetting,
+  handleGetAssetsList,
+  handleSaveAssetsList,
+  handleGetAssetsSetList,
+  handleSaveAssetsSetList,
 } from '@/server/service/mainService';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { AppMockConfType } from '@/types/basic';
@@ -82,6 +88,11 @@ const handleSceneItemOperation = async (operation: string, param: any):Promise<a
 // 分发请求
 const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
   switch (apiPath) {
+    // 保存用于登录的信息
+    case '/mock-system/savePageSetting':
+      return await handleSavePageSetting(param);
+    case '/mock-system/getPageSetting':
+      return await handleGetPageSetting();
     // 是否从请求中创建mockItem
     case '/mock-system/isCreateMockItemFromRequest':
       return changeIsCreateMockItemFromRequestStatus();
@@ -115,6 +126,16 @@ const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
       return await handleSceneItemOperation('delete', param);
     case '/mock-system/selectSceneItem':
       return await handleSceneItemOperation('select', param);
+    // 静态资源操作
+    case '/mock-system/getAssetsList':
+      return await handleGetAssetsList();
+    case '/mock-system/saveAssetsList':
+      return await handleSaveAssetsList(param);
+    // 静态资源集操作
+    case '/mock-system/getAssetsSetList':
+      return await handleGetAssetsSetList();
+    case '/mock-system/saveAssetsSetList':
+      return await handleSaveAssetsSetList(param);
   }
 };
 

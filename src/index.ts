@@ -20,9 +20,9 @@ let wsServer: any;
 const messageStatusPair: any = {};
 
 const startServer = (port: number, open = false, remark: string = "mock server"): http.Server => {
-  const server = http.createServer();
-
+  const server = http.createServer({ keepAlive: true, requestTimeout: 10000 });
   server.listen(port, () => {
+    server.setTimeout(10000);
     console.log(chalk.green(`${remark || ''} Server running at http://localhost:${port}/`));
     if (open) {
       c.exec(`start http://localhost:${port}`);
@@ -161,15 +161,22 @@ export const startMockServer = (proxyInfo: any): void => {
                 handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, parsedObj, messageId }, memoryData, res).catch(console.error);
               });
             }
-          } else if (matchedProxy.target && isNeedProxy) {
+          } else if (matchedProxy?.target && isNeedProxy) {
             const info2CreateMockItemFromRequest = {
               apiPath,
               mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]?.id ?? uuid(),
               isCreateMockItemFromRequest: isNeedCreateMock,
             };
 
-            proxyRequest({ ...matchedProxy, authInfo: memoryData.authInfo[matchedProxy.prefix] }, peekObjStream, req, res, info2CreateMockItemFromRequest, wsServer);
+            proxyRequest({
+              ...matchedProxy, 
+              loginPath: memoryData.authConf?.[matchedProxy.prefix]?.loginPath,
+              authCodePath: memoryData.authConf?.[matchedProxy.prefix]?.authCodePath,
+              auth: memoryData.authConf?.[matchedProxy.prefix]?.auth,
+              conf: memoryData.authConf?.[matchedProxy.prefix]?.conf,
+            }, peekObjStream, req, res, info2CreateMockItemFromRequest, wsServer);
           } else {
+            console.log('not find matched proxy');
             res.statusCode = 404;
             res.end();
           }

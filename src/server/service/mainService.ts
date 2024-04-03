@@ -1,12 +1,14 @@
 import assert from 'assert';
 import path from 'node:path';
 import fse from 'fs-extra';
+import JSON5 from 'json5';
 import {
   projectRootDir,
   move,
   getDirSubList,
   readLocalFile,
   mockDirName,
+  devServerRootDir,
 } from '@/utils/fileUtils';
 import { 
   readObjectFromJsonFile, 
@@ -35,7 +37,7 @@ const memoryData = {
   memoryMockItemAndSceneItemListPair: {} satisfies Record<string, SceneItemBaseInfoType[]>, // 这个是给web端用的，用来展示mockItem的scene列表
   memoryMockItemAndSceneItemConf: {} as any as MemoryMockItemAndSceneItemConfType,  // 这个是给worker线程用，与上边的区别是会使用接口类型（type）分组用来获取匹配的参数
   appMockConf: [] as AppMockConfType,
-  authInfo: {} satisfies Record<string, { authType: string, auth: object | string }>,
+  authConf: {} satisfies Record<string, { loginPath: string, authInfo: { authType: string, auth: object | string } }>,
 };
 
 export type MemoryDataType = typeof memoryData;
@@ -332,8 +334,75 @@ export const createMockItemAndSceneItemFromProxy = (param: {
   cb && cb();
 };
 
+// 保存setting信息
+export const handleSavePageSetting = async (param: any): Promise<boolean> => {
+  const { settingFor, ...rest } = param;
+  const loginInfo = await readObjectFromJsonFile(path.join(devServerRootDir, 'loginInfo.json'));
+  loginInfo[settingFor] = rest;
+  await writeObjectToJsonFile(path.join(devServerRootDir, 'loginInfo.json'), loginInfo);
+
+  const roughPrefix = rest.apiPath?.match(/^\/?\w+\//g)?.[0] || '';
+  const tmpPrefix = roughPrefix.split('/').filter(Boolean).join('');
+  const prefix = `/${tmpPrefix}`;
+  const confObj = JSON5.parse(rest.conf || '{}');
+  const { token, apiPath: loginPath, authType } = rest;
+  const { token: authCodePath, auth: conf } = confObj;
+
+  if(!Object.keys(memoryData.authConf[prefix] || {}).length) {
+    memoryData.authConf[prefix] = { loginPath: '', auth: {}, conf: { authType: 'header', conf: {} } };
+  } 
+  if(loginPath)
+    memoryData.authConf[prefix].loginPath = loginPath.replace(/^\/\w+\//, '/');
+  if(Object.keys(conf || {}).length)
+    memoryData.authConf[prefix].conf.conf = conf;
+  if(authType)
+    memoryData.authConf[prefix].conf.authType = authType;
+  if(authCodePath)
+    memoryData.authConf[prefix].authCodePath = authCodePath;
+  if(token) {
+    const authKey = (Object.keys(conf || {})[0] ?? 'Authorization');
+    // eslint-disable-next-line no-template-curly-in-string
+    memoryData.authConf[prefix].auth[authKey] = (conf[authKey] ?? 'Bearer ${token}').replace(/\$\{\w+\}/g, token);;
+  }
+  return true;
+};
+
+// 获取setting信息
+export const handleGetPageSetting = async (): Promise<any> => {
+  const loginInfo = await readObjectFromJsonFile(path.join(devServerRootDir, 'loginInfo.json'));
+  return loginInfo;
+};
+
+
 // 设置授权信息
-export const setAuthInfo = (param: { prefix: string, authType: string, auth: object | string }): void => {
-  const { prefix, authType, auth } = param;
-  memoryData.authInfo[prefix] = { authType, auth };
+export const setAuthInfo = (param: { prefix: string, auth: object | string }): void => {
+  const { prefix, auth } = param;
+  if(Object.keys(memoryData.authConf[prefix] || {}).length === 0) {
+    memoryData.authConf[prefix] = { loginPath: '', auth: {}, conf: {} };
+  }
+  memoryData.authConf[prefix].auth = auth;
+};
+
+// 获取静态资源列表
+export const handleGetAssetsList = async (): Promise<any> => {
+  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsList.json'));
+  return Object.keys(res).length ? res : [];
+};
+
+// 保存静态资源列表
+export const handleSaveAssetsList = async (param: any): Promise<boolean> => {
+  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsList.json'), param?.assetsList ?? []);
+  return res;
+};
+
+// 获取自定义文件集列表
+export const handleGetAssetsSetList = async (): Promise<any> => {
+  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsSetList.json'));
+  return res.length ? res : [];
+};
+
+// 保存自定义文件集列表
+export const handleSaveAssetsSetList = async (param: any): Promise<boolean> => {
+  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsSetList.json'), param?.assetsSetList ?? []);
+  return res;
 };

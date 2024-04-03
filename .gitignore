@@ -4,3 +4,7 @@ mock
 *-lock.json
 *-lock.yaml
 web
+loginInfo.json
+assetsConf
+.vscode
+.idea
