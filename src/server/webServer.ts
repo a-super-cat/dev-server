@@ -1,8 +1,8 @@
 import { 
-  readLocalFile, 
   isFileExist,
   devServerRootDir,
 } from '@/utils/fileUtils';
+import fs from 'node:fs';
 import type { ServerResponse, IncomingMessage } from 'http';
 import path from 'node:path';
 import mime from 'mime';
@@ -11,17 +11,16 @@ import mime from 'mime';
 const handleStaticResourceRequest = async (apiPath: string, res: ServerResponse<IncomingMessage>):Promise<void> => {
   const filePath = apiPath.replace(/^\/?mock-web\//, '');
   const paths = filePath.split('/');
-  let data: any = null;
+  let fileStream: any = null;
   if(isFileExist(path.join(devServerRootDir, 'web', ...paths))) {
-    data = await readLocalFile(path.join(devServerRootDir, 'web', ...paths));
+    fileStream = fs.createReadStream(path.join(devServerRootDir, 'web', ...paths));
   } else {
-    data = await readLocalFile(path.join(devServerRootDir, 'web', 'index.html'));
+    fileStream = fs.createReadStream(path.join(devServerRootDir, 'web', 'index.html'));
   }
-  if(data) {
+  if(fileStream) {
     res.setHeader('Content-Type', mime.getType(apiPath) ?? 'text/html;charset=utf-8');
-    res.write(data);
     res.statusCode = 200;
-    res.end();
+    fileStream.pipe(res);
   }
 };
 
