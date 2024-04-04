@@ -1,20 +1,13 @@
 {
   "$schema": "./mock-config-schema.json",
   "serverPort": 3000,
+  "assetsManageWithGit": false,
   "proxy": {
     "/test": {
-      "target": "http://iems-dev.iyunang.com/",
-      "auth": {
-        "path": "/api/login",
-        "authCodePath": "data.token",
-        "authRequest": {
-          "key": "Authorization",
-          "pattern": "Bearer ${token}"
-        }
-      }
+      "target": "http://example.com/"
     },
-    "/loc": {
-      "target": "http://localhost:3002/"
+    "/local": {
+      "target": "http://localhost:3003/"
     }
   }
 }

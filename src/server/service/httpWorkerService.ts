@@ -11,7 +11,7 @@ const getSceneItemResponseConf = (apiSceneConfObj: any, param: any): string => {
   assert(Object.values(apiSceneConfObj ?? {}).length > 0, 'this api does not has any scene');
   const sceneScoreList = Object.values(apiSceneConfObj || {}).map((sceneConf: any) => {
     const { param: sceneParam, id } = sceneConf;
-    const sceneParamObj = JSON5.parse(sceneParam);
+    const sceneParamObj = JSON5.parse(sceneParam ?? '{}');
     let score = 0;
     requestParamKeys.forEach(key => {
       if(sceneParamObj[key]) {
@@ -24,7 +24,6 @@ const getSceneItemResponseConf = (apiSceneConfObj: any, param: any): string => {
     });
     return { id, score };
   }).sort((a, b) => b.score - a.score);
-  console.log('sceneScoreList', sceneScoreList);
   return sceneScoreList[0].id || '';
 };
 
