@@ -4,9 +4,9 @@
   "assetsManageWithGit": false,
   "proxy": {
     "/test": {
-      "target": "http://iems-dev.iyunang.com/"
+      "target": "http://example.com/"
     },
-    "/loc": {
+    "/local": {
       "target": "http://localhost:3003/"
     }
   }
