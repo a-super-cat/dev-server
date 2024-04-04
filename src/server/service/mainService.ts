@@ -385,24 +385,24 @@ export const setAuthInfo = (param: { prefix: string, auth: object | string }): v
 
 // 获取静态资源列表
 export const handleGetAssetsList = async (): Promise<any> => {
-  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsList.json'));
+  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsList.json'));
   return Object.keys(res).length ? res : [];
 };
 
 // 保存静态资源列表
 export const handleSaveAssetsList = async (param: any): Promise<boolean> => {
-  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsList.json'), param?.assetsList ?? []);
+  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsList.json'), param?.assetsList ?? []);
   return res;
 };
 
 // 获取自定义文件集列表
 export const handleGetAssetsSetList = async (): Promise<any> => {
-  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsSetList.json'));
+  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsSetList.json'));
   return res.length ? res : [];
 };
 
 // 保存自定义文件集列表
 export const handleSaveAssetsSetList = async (param: any): Promise<boolean> => {
-  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit ? projectRootDir : devServerRootDir, 'assetsConf', 'assetsSetList.json'), param?.assetsSetList ?? []);
+  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsSetList.json'), param?.assetsSetList ?? []);
   return res;
 };
