@@ -336,16 +336,14 @@ export const createMockItemAndSceneItemFromProxy = (param: {
 
 // 保存setting信息
 export const handleSavePageSetting = async (param: any): Promise<boolean> => {
-  const { settingFor, ...rest } = param;
-  const loginInfo = await readObjectFromJsonFile(path.join(devServerRootDir, 'loginInfo.json'));
-  loginInfo[settingFor] = rest;
-  await writeObjectToJsonFile(path.join(devServerRootDir, 'loginInfo.json'), loginInfo);
 
-  const roughPrefix = rest.apiPath?.match(/^\/?\w+\//g)?.[0] || '';
+  await writeObjectToJsonFile(path.join(devServerRootDir, 'loginInfo.json'), param);
+
+  const roughPrefix = param.apiPath?.match(/^\/?\w+\//g)?.[0] || '';
   const tmpPrefix = roughPrefix.split('/').filter(Boolean).join('');
   const prefix = `/${tmpPrefix}`;
-  const confObj = JSON5.parse(rest.conf || '{}');
-  const { token, apiPath: loginPath, authType } = rest;
+  const confObj = JSON5.parse(param.conf || '{}');
+  const { token, apiPath: loginPath, authType } = param;
   const { token: authCodePath, auth: conf } = confObj;
 
   if(!Object.keys(memoryData.authConf[prefix] || {}).length) {
@@ -381,28 +379,4 @@ export const setAuthInfo = (param: { prefix: string, auth: object | string }): v
     memoryData.authConf[prefix] = { loginPath: '', auth: {}, conf: {} };
   }
   memoryData.authConf[prefix].auth = auth;
-};
-
-// 获取静态资源列表
-export const handleGetAssetsList = async (): Promise<any> => {
-  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsList.json'));
-  return Object.keys(res).length ? res : [];
-};
-
-// 保存静态资源列表
-export const handleSaveAssetsList = async (param: any): Promise<boolean> => {
-  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsList.json'), param?.assetsList ?? []);
-  return res;
-};
-
-// 获取自定义文件集列表
-export const handleGetAssetsSetList = async (): Promise<any> => {
-  const res = await readObjectFromJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsSetList.json'));
-  return res.length ? res : [];
-};
-
-// 保存自定义文件集列表
-export const handleSaveAssetsSetList = async (param: any): Promise<boolean> => {
-  const res = await writeObjectToJsonFile(path.join( process.env.assetsManageWithGit !== 'true' ? devServerRootDir : projectRootDir, 'assetsConf', 'assetsSetList.json'), param?.assetsSetList ?? []);
-  return res;
 };

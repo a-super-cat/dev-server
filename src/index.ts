@@ -176,7 +176,7 @@ export const startMockServer = (proxyInfo: any): void => {
               conf: memoryData.authConf?.[matchedProxy.prefix]?.conf,
             }, peekObjStream, req, res, info2CreateMockItemFromRequest, wsServer);
           } else {
-            console.log('not find matched proxy');
+            console.log('not find matched proxy for: ', apiPath);
             res.statusCode = 404;
             res.end();
           }

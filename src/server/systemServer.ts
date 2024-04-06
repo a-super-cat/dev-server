@@ -12,10 +12,6 @@ import {
   getFlagForIsCreateMockItemFromRequest,
   handleSavePageSetting,
   handleGetPageSetting,
-  handleGetAssetsList,
-  handleSaveAssetsList,
-  handleGetAssetsSetList,
-  handleSaveAssetsSetList,
 } from '@/server/service/mainService';
 import type { ServerResponse, IncomingMessage } from 'http';
 import type { AppMockConfType } from '@/types/basic';
@@ -126,16 +122,6 @@ const dispatchRequest = async (apiPath: string, param: any):Promise<any> => {
       return await handleSceneItemOperation('delete', param);
     case '/mock-system/selectSceneItem':
       return await handleSceneItemOperation('select', param);
-    // 静态资源操作
-    case '/mock-system/getAssetsList':
-      return await handleGetAssetsList();
-    case '/mock-system/saveAssetsList':
-      return await handleSaveAssetsList(param);
-    // 静态资源集操作
-    case '/mock-system/getAssetsSetList':
-      return await handleGetAssetsSetList();
-    case '/mock-system/saveAssetsSetList':
-      return await handleSaveAssetsSetList(param);
   }
 };
 

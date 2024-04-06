@@ -1,4 +1,5 @@
 import http from 'http';
+import https from 'https';
 import { URL } from 'node:url';
 import _ from 'lodash';
 import * as prettier from 'prettier';
@@ -23,6 +24,7 @@ export const proxyRequest = (proxyInfo: any, peekObjStream: PeekObjectFromStream
     conf = {},
   } = proxyInfo;
   const { apiPath, mockItemId, isCreateMockItemFromRequest } = createMockConfOptions;
+  const webProxy = target.includes('https') ? https : http;
   let requestParam = {};
   // eslint-disable-next-line no-template-curly-in-string
   const { authType = 'header', conf: authorizedInfo = { Authorization: 'Bearer ${token}' } } = conf;
@@ -51,7 +53,7 @@ export const proxyRequest = (proxyInfo: any, peekObjStream: PeekObjectFromStream
     },
   };
 
-  const proxyReq = http.request(target, options, (proxyRes) => {
+  const proxyReq = webProxy.request(target, options, (proxyRes) => {
     const sceneId = uuid();
     res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
 
