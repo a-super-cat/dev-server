@@ -1,6 +1,6 @@
 {
-  "name": "@jiazhiwei/dev-server",
-  "version": "2.1.5",
+  "name": "dev-mock",
+  "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "type": "module",
