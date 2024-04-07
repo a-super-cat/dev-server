@@ -132,7 +132,6 @@ export const startMockServer = (proxyInfo: any): void => {
           // 这个路径是删除掉prefix的路径
           let purifiedApiPath = apiPath;
           const memoryData = getMemoryData();
-          console.log('some11111', proxyInfo, apiPath)
           const matchedProxy = proxyInfo.find((i) => apiPath.startsWith(i.prefix) || apiPath.startsWith(`/${i.prefix}`));
           if (Object.keys(matchedProxy || {}).length > 0) {
             purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
@@ -140,7 +139,7 @@ export const startMockServer = (proxyInfo: any): void => {
           const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
           // 是否要走代理及是否要创建mock数据
           let isNeedProxy, isNeedCreateMock;
-          console.log('some------', memoryData.memoryMockConf?.api2IdAndCheckedScene, purifiedFormattedPath);
+
           if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
             isNeedProxy = true;
             isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
