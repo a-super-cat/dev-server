@@ -43,7 +43,6 @@ process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataT
     assert(selectedSceneId, 'scene not found');
     const matchedSceneItem = memoryMockItemAndSceneItemListPair?.[currentMatchedMockItem.id]?.find(item => item.id === selectedSceneId);
 
-    // const requestResponseConfFile = 
     const filePath = path.join(projectRootDir, mockDirName, apiPath, 'scenes', `${selectedSceneId}.ts`);
     const res = ts.transpileModule(fs.readFileSync(filePath, 'utf8'), {
       compilerOptions: {

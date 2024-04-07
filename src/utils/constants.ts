@@ -9,3 +9,4 @@ export const apiTypeList = ['HTTP', 'JSON-RPC'] as const;
 
 // 本地IP地址
 export const localIps = ['::1', '127.0.0.1'];
+

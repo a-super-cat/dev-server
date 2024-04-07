@@ -10,8 +10,7 @@ import { v4 as uuid } from 'uuid';
 import type { ServerResponse, IncomingMessage } from 'node:http';
 import { proxyRequest } from '@/proxyServer/httpProxyServer';
 import { localIps } from '@/utils/constants';
-import { PeekObjectFromStream } from '@/stream/PeekObjectFromStream';
-import { DoNothingWriteAbleStream } from '@/stream/DoNothingWriteAbleStream';
+import { parseBody, formatParams } from '@/utils/commonUtils';
 
 const _dirname = join(fileURLToPath(import.meta.url), '../');
 
@@ -46,7 +45,7 @@ const startServer = (port: number, open = false, remark: string = "mock server")
 
 const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes: any) => {
   const { data, mockItemId, matchedScene, success } = messageRes;
-  response.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  response.setHeader('Content-Type', 'application/json;charset=utf-8');
   const statusCode = success ? 200 : 500;
   response.write(JSON.stringify(data || {}));
   response.statusCode = statusCode;
@@ -95,28 +94,21 @@ export const startMockServer = (proxyInfo: any): void => {
     const apiPath: string = parsedUrl.pathname;
     const apiQuery = parsedUrl.searchParams;
     let param;
-    const peekObjStream = new PeekObjectFromStream();
-
-    if(req.method !== 'GET') {
-      req.pipe(peekObjStream);
-    }
 
     switch (true) {
       case /^\/?mock-system\/.*/.test(apiPath):
         // 系统请求
         if (req.method === 'GET') {
-          param = [...apiQuery.keys()].reduce((rsObj, key) => {
+          param = formatParams([...apiQuery.keys()].reduce((rsObj, key) => {
             rsObj[key] = apiQuery.get(key);
             return rsObj;
-          }, {});
+          }, {}));
 
           handleSystemRequest(apiPath, param, res);
         } else {
-          const doNothing = new DoNothingWriteAbleStream();
-          peekObjStream.pipe(doNothing);
-          peekObjStream.on('parsed', (parsedObj) => {
+          parseBody(req).then((parsedObj) => {
             handleSystemRequest(apiPath, parsedObj, res);
-          });
+          }).catch(console.error);
         }
         break;
       case /^\/?mock-web\/.*/.test(apiPath) || apiPath === '/':
@@ -152,17 +144,15 @@ export const startMockServer = (proxyInfo: any): void => {
           if (!isNeedProxy && !isNeedCreateMock) {
             const messageId = uuid();
             if (req.method === 'GET') {
-              param = [...apiQuery.keys()].reduce((rsObj, key) => {
+              param = formatParams([...apiQuery.keys()].reduce((rsObj, key) => {
                 rsObj[key] = apiQuery.get(key);
                 return rsObj;
-              }, {});
+              }, {}));
               handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
             } else {
-              const doNothing = new DoNothingWriteAbleStream();
-              peekObjStream.pipe(doNothing);
-              peekObjStream.on('parsed', (parsedObj) => {
+              parseBody(req).then((parsedObj) => {
                 handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param: parsedObj, messageId }, memoryData, res).catch(console.error);
-              });
+              }).catch(console.error);
             }
           } else if (matchedProxy?.target && isNeedProxy) {
             const info2CreateMockItemFromRequest = {
@@ -177,7 +167,7 @@ export const startMockServer = (proxyInfo: any): void => {
               authCodePath: memoryData.authConf?.[matchedProxy.prefix]?.authCodePath,
               auth: memoryData.authConf?.[matchedProxy.prefix]?.auth,
               conf: memoryData.authConf?.[matchedProxy.prefix]?.conf,
-            }, peekObjStream, req, res, info2CreateMockItemFromRequest, wsServer);
+            }, req, res, info2CreateMockItemFromRequest, wsServer);
           } else {
             console.log('not find matched proxy for: ', apiPath);
             res.statusCode = 404;

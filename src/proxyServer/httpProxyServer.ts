@@ -8,11 +8,12 @@ import { v4 as uuid } from 'uuid';
 import { projectRootDir, mockDirName } from '@/utils/fileUtils';
 import { createMockItemAndSceneItemFromProxy, setAuthInfo } from '@/server/service/mainService';
 import { localIps } from '@/utils/constants';
-import type { PeekObjectFromStream } from '@/stream/PeekObjectFromStream';
+import { parseBody } from '@/utils/commonUtils';
+// import type { PeekObjectFromStream } from '@/stream/PeekObjectFromStream';
 import fse from 'fs-extra';
 import assert from 'assert';
 
-export const proxyRequest = (proxyInfo: any, peekObjStream: PeekObjectFromStream, req: http.IncomingMessage, res: http.ServerResponse, createMockConfOptions: any, wsServer: any): void => {
+export const proxyRequest = (proxyInfo: any, req: http.IncomingMessage, res: http.ServerResponse, createMockConfOptions: any, wsServer: any): void => {
   const { 
     prefix, 
     target, 
@@ -39,9 +40,9 @@ export const proxyRequest = (proxyInfo: any, peekObjStream: PeekObjectFromStream
     reqPath = pathUtil.pathname + pathUtil.search;
   }
 
-  peekObjStream.on('parsed', (obj) => {
-    requestParam = obj;
-  });
+  parseBody(req).then((parsedObj) => {
+    requestParam = parsedObj;
+  }).catch(console.error);
 
   const options = {
     path: deletePrefix ? formattedApiPath : reqPath,
@@ -140,7 +141,7 @@ export const proxyRequest = (proxyInfo: any, peekObjStream: PeekObjectFromStream
     proxyReq.setHeader('Connection', 'keep-alive');
     proxyReq.setHeader('Origin', target);
     proxyReq.setHeader('Content-Type', req.headers['content-type'] ?? 'application/json');
-    peekObjStream.pipe(proxyReq);
+    req.pipe(proxyReq);
   } else {
     // 将客户端的请求体转发到目标服务器
     req.pipe(proxyReq);
