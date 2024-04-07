@@ -48,7 +48,7 @@ const afterMessageDealCallBack = (resolve, param, response: any) => (messageRes:
   const { data, mockItemId, matchedScene, success } = messageRes;
   response.setHeader('Content-Type', 'text/plain; charset=utf-8');
   const statusCode = success ? 200 : 500;
-  response.write(data);
+  response.write(JSON.stringify(data || {}));
   response.statusCode = statusCode;
   response.end();
   wsServer?.clients?.forEach((client: any) => {
@@ -132,6 +132,7 @@ export const startMockServer = (proxyInfo: any): void => {
           // 这个路径是删除掉prefix的路径
           let purifiedApiPath = apiPath;
           const memoryData = getMemoryData();
+          console.log('some11111', proxyInfo, apiPath)
           const matchedProxy = proxyInfo.find((i) => apiPath.startsWith(i.prefix) || apiPath.startsWith(`/${i.prefix}`));
           if (Object.keys(matchedProxy || {}).length > 0) {
             purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
@@ -139,6 +140,7 @@ export const startMockServer = (proxyInfo: any): void => {
           const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
           // 是否要走代理及是否要创建mock数据
           let isNeedProxy, isNeedCreateMock;
+          console.log('some------', memoryData.memoryMockConf?.api2IdAndCheckedScene, purifiedFormattedPath);
           if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
             isNeedProxy = true;
             isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
@@ -157,6 +159,8 @@ export const startMockServer = (proxyInfo: any): void => {
               }, {});
               handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
             } else {
+              const doNothing = new DoNothingWriteAbleStream();
+              peekObjStream.pipe(doNothing);
               peekObjStream.on('parsed', (parsedObj) => {
                 handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, parsedObj, messageId }, memoryData, res).catch(console.error);
               });
