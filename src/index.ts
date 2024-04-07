@@ -161,7 +161,7 @@ export const startMockServer = (proxyInfo: any): void => {
               const doNothing = new DoNothingWriteAbleStream();
               peekObjStream.pipe(doNothing);
               peekObjStream.on('parsed', (parsedObj) => {
-                handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, parsedObj, messageId }, memoryData, res).catch(console.error);
+                handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param: parsedObj, messageId }, memoryData, res).catch(console.error);
               });
             }
           } else if (matchedProxy?.target && isNeedProxy) {

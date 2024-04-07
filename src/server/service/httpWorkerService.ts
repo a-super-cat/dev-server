@@ -1,6 +1,7 @@
 import ts from 'typescript';
 import path from 'node:path';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'assert';
 import JSON5 from 'json5';
 import { projectRootDir, mockDirName } from '@/utils/fileUtils';
@@ -46,21 +47,19 @@ process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataT
     const filePath = path.join(projectRootDir, mockDirName, apiPath, 'scenes', `${selectedSceneId}.ts`);
     const res = ts.transpileModule(fs.readFileSync(filePath, 'utf8'), {
       compilerOptions: {
-        module: ts.ModuleKind.ESNext,
-        target: ts.ScriptTarget.ES5,
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ESNext,
       },
     });
-    const parsedText = res.outputText;
-    let funcStr = '';
-    if(parsedText.includes('export default')) {
-      funcStr = parsedText.replace('export default', '');
-    } else {
-      funcStr = `(${parsedText})`;
+    try {
+      const context = { exports: {} } as any;
+      vm.createContext(context);
+      vm.runInContext(res.outputText, context);
+      const responseData = context.exports.default(param);
+      process.send?.({ messageId, data: responseData, mockItemId: currentMatchedMockItem.id, matchedScene: matchedSceneItem?.name, success: true });
+    } catch (error) {
+      console.log('run response file error: ', error);
     }
-    // eslint-disable-next-line no-eval
-    const funcFromFile = eval(funcStr);
-    const responseData = funcFromFile(param);
-    process.send?.({ messageId, data: responseData, mockItemId: currentMatchedMockItem.id, matchedScene: matchedSceneItem?.name, success: true });
   } catch(e) {
     console.log('http worker err: ', e);
     process.send?.({ messageId, data: e.toString(), mockItemId: currentMatchedMockItem?.id, matchedScene: '--', success: false });
