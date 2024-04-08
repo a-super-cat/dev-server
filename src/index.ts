@@ -88,7 +88,7 @@ export const startMockServer = (proxyInfo: any): void => {
     console.log(chalk.green('WebSocket Server connected'));
   });
 
-  const mockServer = startServer(serverPort);
+  const mockServer = startServer(serverPort, true, 'Mock');
 
   mockServer.on('request', (req, res) => {
     const parsedUrl = new URL(req.url ?? '', `http://${req.headers.host}`);
