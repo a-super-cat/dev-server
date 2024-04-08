@@ -1,142 +1,135 @@
-# 一个mock服务器
+# Title: A Mock Server for Development
 
-[**For English**](https://github.com/a-super-cat/dev-server/blob/main/README.en.md "English Readme")
+[中文文档](https://github.com/a-super-cat/dev-server/blob/main/README.zh.md)
 
-## 特点
+**Abstract:**
+This document provides an overview of the mock server package, including installation, configuration, and usage instructions.
 
-* 返回值使用ts方法进行配置，可根据参数动态返回数据
-* 可从被代理的请求中创建mock的配置，更高效
-* 当不选择mock场景时，会根据参数自动寻找所有场景中最匹配的场景进行返回，在宽接口的场景下非常方便
+## 1、Installation
 
-## 1、安装
-
-**npm**
+To install the mock server using npm, execute the following command:
 
 ```bash
-npm i @jiazhiwei/dev-server -d
+npm i @easily-tools/mock-server --save-dev
 ```
 
-**yarn**
+Alternatively, for yarn users:
 
 ```bash
-yarn add @jiazhiwei/dev-server -D
+yarn add @easily-tools/mock-server -D
 ```
 
-**pnpm**
+For pnpm, the command is:
 
 ```bash
-pnpm add @jiazhiwei/dev-server -D
+pnpm add @easily-tools/mock-server -D
 ```
 
-------
+----
 
-## 2、配置
+## 2、Configuration
 
-**mock.config.json  示例**
+A sample **mock.config.json** configuration is provided below:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/a-super-cat/dev-server/main/mock-config-schema.json",
+  "serverPort": 3000,		// the mock server port, not required, default is 3000,
+  "wsServerPort": 3001,		// the mock server ws port for mock server push message to mock server web
+  "mockDir": "mock",		// the folder name is used to store the mock file
   "proxy": {
-    "/test": {
-      "target": "http://example.com/",
-      "changeOrigin": true,
-      "auth": {
-        "path": "/api/to/login",
-        "authCodePath": "data.token",
-        "authRequest": {
-          "key": "Authorization",
-          "pattern": "Bearer ${token}"
-        }
-      }
+    "/test": {				// The prefix of the target brokered by the mock service
+      "target": "http://example.com/", // support http/https
     }
   }
 }
 ```
 
-**配置解析**
+example:  "http://localhost:3000/test/api/xxx" === "http://example.com/api/xxx"
 
-* `serverPort`：代理服务的端口，默认3000
+## 3、Running the Server
 
-* `wsServerPort`：webSocket的端口，用于代理服务器向web推送消息， 默认3001
-
-* `mockDir`：mock文件存储的目录， 默认mock
-
-* `https`： 是否是https，目前只支持http，后续会提供支持，默认false
-
-* `proxy`：代理的配置，字段会在下面介绍
-
-* `proxy.[prefix]`: prefix为被代理的请求的前缀，例如原始请求为http://example.com/api/login使用代理后请求地址要改为http://example.com/prefix/api/login 值为对象，字段以下介绍
-
-* `proxy.[prefix]`.target: 要将请求代理到的地址
-
-* `proxy.[prefix].changeOrigin`：被代理的请求是否要重写origin，默认值为true
-
-* `proxy.[prefix].deletePrefix`：在发送请求的时候是否删除prefix，默认值true
-
-* `proxy.[prefix].auth`：如何进行授权的配置，字段以下介绍
-
-* `proxy.[prefix].auth.path`：授权信息的请求路径，不含prefix
-
-* `proxy.[prefix].auth.username`：获取授权信息的用户名，不推荐写入配置，如果配置了的话，会在mock-server的web端打开的时候自动进行请求，获取授权信息
-
-* `proxy.[prefix].auth.password`：授权信息的密码，不推荐写入配置，与username配合使用
-
-* `proxy.[prefix].auth.propMap`：授权信息的字段映射，对象类型，key为username和password，value为映射后的字段名
-
-* `proxy.[prefix].auth.authCodePath`：授权信息值的路径，在auth中必须配置，例如data.token
-
-* `proxy.[prefix].auth.authRequest`：对象类型，用于配置如何对请求进行授权，字段以下介绍
-
-* `proxy.[prefix].auth.authRequest.type`：授权方式，默认为header
-
-* `proxy.[prefix].auth.authRequest.key`：授权信息的key，默认值为Authorization
-
-* `proxy.[prefix].auth.authRequest.pattern`：授权信息value的pattern，默认值为"Bearer ${token}"
-
-------
-
-## 3、运行
-
-**npm**
+To run the mock server, use the following command with npm:
 
 ```bash
 npx mock
 ```
 
-**yarn**
+For yarn:
 
 ```bash
 yarn mock
 ```
 
-**pnpm**
+Or with pnpm:
 
 ```bash
 pnpm mock
 ```
 
------
+**Notice:**
+If the mock command is occupied, the alternative "mock-server" cmd can be used.
 
-**Notice**
+----
 
-如果mock命令已被其他命令占用，可使用mock-server替代
+## 4、Usage
+
+### 4.1 Install & Start
+
+[![add-start.gif](https://i.postimg.cc/vBwMcxjM/add-start.gif)](https://postimg.cc/zL74Qv8P)
+
+### 4.2 Add a normal mockItem
+
+**Note:**  The return value configuration is a function that takes the actual request parameters (for GET requests, they are also processed as objects passed into the function). You can flexibly configure the return values based on these parameters.
+
+[![useCase.gif](https://i.postimg.cc/vTM0gGbc/useCase.gif)](https://postimg.cc/YGn6TK4H)
+
+### 4.3 Add a Api with path param
+
+**Note:**  If the API has path parameters, use a colon at the beginning when configuring the API to mark that this position is a path parameter. In the response configuration of the scenario, you can use `pathParams` to obtain the actual parameters at the time of the request. It is an array of string types, and the order of the parameters in the array is the same as the order of the path parameters defined when the API is defined
+
+[![with-Path-Param.gif](https://i.postimg.cc/x1kdf7Tr/with-Path-Param.gif)](https://postimg.cc/sMrzKThK)
+
+### 4.4 Automatic response
+
+**Note:**  **If no Scene is selected**, the return value of the Scene configuration that **best matches** the requested parameters (calculated based on the fields and values of the Scene parameters and the actual requested parameters) is returned, and if there are multiple matches, the result of the most **recently** configured Scene is returned
+
+[![auto-Response.gif](https://i.postimg.cc/MTvkVcXv/auto-Response.gif)](https://postimg.cc/gXFBP2VW)
+
+### 4.5 Choose Scene
+
+**Note:** If you select a scenario, when a request comes in, the return value configuration corresponding to the chosen scenario will be returned. If you click on the scenario name again, you can cancel the selection.
+
+[![when-Selected-Scene.gif](https://i.postimg.cc/Y0bBWJwz/when-Selected-Scene.gif)](https://postimg.cc/XBGPM1qr)
 
 
 
-## 4、使用
+### 4.6 Brief model
 
-[![readme.jpg](https://i.postimg.cc/DzvJPRzs/readme.jpg)](https://postimg.cc/zyQGJtKX)
+**Note:** You can choose the brief mode, which displays information in a condensed manner. To view the mock item with full information, click the icon on the left side of the mock item. Additionally, if you make modifications to the mock item, it will switch to the normal mode.
 
-### 补充：
-可以不选择任何场景，此时会根据接口的参数以及场景配置的参数来进行匹配，返回最符合请求参数的场景中配置的返回值，如果有多个匹配，则返回匹配到的第一个（最近添加的那个）
-
-
-## 其他
-
-如果代码有bug，可以在项目的github提交issue，也可以通过邮箱联系to_great_again@outlook.com
+[![brief-Model.gif](https://i.postimg.cc/N01ksXTR/brief-Model.gif)](https://postimg.cc/v1ZVXc0m)
 
 
 
+### 4.7 Manage scene with iteration
 
+[![use-Iteration.gif](https://i.postimg.cc/c4X7nBkm/use-Iteration.gif)](https://postimg.cc/jLnJVPbw)
 
+### 4.8 Setting
+
+**Note:** If you wish to create a mockItem through a real request, you need to configure it in the settings. You can choose the password encryption method and the salt. If there is no encryption, please select 'none'. At the end of the 'Login Api', you can choose whether to use header or query methods for encrypting information. In 'Auth Conf', the fields on the left side are the ones required by the system, while the fields on the right side are those required by your login interface, which are used for field mapping
+
+​	The auth configuration is used to define the format of authentication information. If yours differs from the default, please modify it accordingly.
+
+[![setting.gif](https://i.postimg.cc/VNngCCF1/setting.gif)](https://postimg.cc/v185RDjS)
+
+### 4.9 Use in project
+
+**Note:** When using it in a project, you can configure the `env` file to send requests to the mock server in the development environment.
+
+[![screenshots.gif](https://i.postimg.cc/qMp6FgWv/screenshots.gif)](https://postimg.cc/F1nKdF9M)
+
+### Contact Information:
+
+For any issues or inquiries regarding the code, please submit an issue on the GitHub repository or contact the developer at to_great_again@outlook.com.
