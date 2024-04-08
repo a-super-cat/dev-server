@@ -11,6 +11,7 @@ import type { ServerResponse, IncomingMessage } from 'node:http';
 import { proxyRequest } from '@/proxyServer/httpProxyServer';
 import { localIps } from '@/utils/constants';
 import { parseBody, formatParams } from '@/utils/commonUtils';
+import type { JsonObj } from './types/basic';
 
 const _dirname = join(fileURLToPath(import.meta.url), '../');
 
@@ -129,14 +130,25 @@ export const startMockServer = (proxyInfo: any): void => {
             purifiedApiPath = apiPath.replace(matchedProxy.prefix, '');
           }
           const purifiedFormattedPath = purifiedApiPath.split('/').filter(Boolean).join('.');
+          const mockItemDir = `${req.method ?? 'GET'}.${purifiedApiPath.split('/').filter(Boolean).join('.')}`;
+
+          // 带有路径参数的mockItem
+          const withPathParamsMockItemList = memoryData.memoryMockItemIdAndApiPairList.filter(item => item?.apiPath?.includes('__'));
+          const matchedMockItem: JsonObj | undefined = withPathParamsMockItemList.find(item => {
+            const mockItemDirName: string = item.apiPath;
+            const matchPartten = mockItemDirName.replaceAll(/\.__\w+\.?/g, '.\\w+.');
+            return new RegExp(`^${matchPartten}$`).test(mockItemDir);
+          }); 
+
+          const matchedMockItemDir = memoryData.memoryMockConf.api2IdAndCheckedScene?.[mockItemDir]?.mockPattern ? mockItemDir : matchedMockItem?.apiPath;
+
           // 是否要走代理及是否要创建mock数据
           let isNeedProxy, isNeedCreateMock;
-
-          if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]) {
+          if (!memoryData.memoryMockConf?.api2IdAndCheckedScene?.[matchedMockItemDir]) {
             isNeedProxy = true;
             isNeedCreateMock = memoryData.isCreateMockItemFromRequest;
           } else {
-            const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene[purifiedFormattedPath].mockPattern;
+            const thisMockItemMockPattern = memoryData.memoryMockConf.api2IdAndCheckedScene?.[matchedMockItemDir]?.mockPattern;
             isNeedProxy = thisMockItemMockPattern.startsWith('request') || memoryData.isCreateMockItemFromRequest;
             isNeedCreateMock = thisMockItemMockPattern.endsWith('create') || memoryData.isCreateMockItemFromRequest;
           }
@@ -148,16 +160,16 @@ export const startMockServer = (proxyInfo: any): void => {
                 rsObj[key] = apiQuery.get(key);
                 return rsObj;
               }, {}));
-              handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
+              handleHttpWorkerRequest({ mockItemDir: matchedMockItemDir, purifiedFormattedPath, param, messageId }, memoryData, res).catch(console.error);
             } else {
               parseBody(req).then((parsedObj) => {
-                handleHttpWorkerRequest({ apiPath: purifiedFormattedPath, param: parsedObj, messageId }, memoryData, res).catch(console.error);
+                handleHttpWorkerRequest({ mockItemDir: matchedMockItemDir, purifiedFormattedPath, param: parsedObj, messageId }, memoryData, res).catch(console.error);
               }).catch(console.error);
             }
           } else if (matchedProxy?.target && isNeedProxy) {
             const info2CreateMockItemFromRequest = {
               apiPath,
-              mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[purifiedFormattedPath]?.id ?? uuid(),
+              mockItemId: memoryData.memoryMockConf?.api2IdAndCheckedScene?.[mockItemDir]?.id ?? uuid(),
               isCreateMockItemFromRequest: isNeedCreateMock,
             };
 

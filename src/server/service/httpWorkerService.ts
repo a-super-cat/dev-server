@@ -29,21 +29,21 @@ const getSceneItemResponseConf = (apiSceneConfObj: any, param: any): string => {
 };
 
 process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataType }) => {
-  const { apiPath, param, messageId } = arg;
+  const { mockItemDir, purifiedFormattedPath, param, messageId } = arg;
   const { memoryMockConf: mockConf, memoryMockItemAndSceneItemConf, memoryMockItemAndSceneItemListPair } = memoryData;
 
-  const currentMatchedMockItem = mockConf.api2IdAndCheckedScene[apiPath];
+  const currentMatchedMockItem = mockConf.api2IdAndCheckedScene[mockItemDir];
   try {
     assert(currentMatchedMockItem, 'apiPath not found');
     const sceneId = currentMatchedMockItem.selectedSceneId;
     let selectedSceneId = sceneId;
     if(!sceneId) {
-      selectedSceneId = getSceneItemResponseConf(memoryMockItemAndSceneItemConf?.HTTP?.[apiPath], param);
+      selectedSceneId = getSceneItemResponseConf(memoryMockItemAndSceneItemConf?.HTTP?.[mockItemDir], param);
     }
     assert(selectedSceneId, 'scene not found');
     const matchedSceneItem = memoryMockItemAndSceneItemListPair?.[currentMatchedMockItem.id]?.find(item => item.id === selectedSceneId);
 
-    const filePath = path.join(projectRootDir, mockDirName, apiPath, 'scenes', `${selectedSceneId}.ts`);
+    const filePath = path.join(projectRootDir, mockDirName, mockItemDir, 'scenes', `${selectedSceneId}.ts`);
     const res = ts.transpileModule(fs.readFileSync(filePath, 'utf8'), {
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
@@ -51,7 +51,20 @@ process.on('message', ({ arg, memoryData } : { arg: any, memoryData: MemoryDataT
       },
     });
     try {
-      const context = { exports: {} } as any;
+      const requestPathItems: string[] = purifiedFormattedPath.split('.');
+      const mockPathItems = mockItemDir.split('.');
+      mockPathItems.shift();
+      const pathParamsIndex: number[] = [];
+      mockPathItems.forEach((item, index) => {
+        if(item.startsWith('__')) {
+          pathParamsIndex.push(index);
+        }
+      });
+      const pathParams = pathParamsIndex.reduce<string[]>((rs, index) => {
+        rs.push(requestPathItems[index]);
+        return rs;
+      }, []);
+      const context = { exports: {}, pathParams } as any;
       vm.createContext(context);
       vm.runInContext(res.outputText, context);
       const responseData = context.exports.default(param);

@@ -121,9 +121,9 @@ export const getMockItemAndSceneItemConf = async ():Promise<MemoryMockItemAndSce
 };
 
 // 保存迭代列表
-export const handleSaveIterationList = async (param: string[]): Promise<boolean> => {
+export const handleSaveIterationList = async (param: { list: string[] }): Promise<boolean> => {
   const tmp = await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'));
-  tmp.iterationList = param;
+  tmp.iterationList = Object.values(param?.list ?? []);
   return await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), tmp);
 };
 // 获取迭代列表
@@ -140,13 +140,12 @@ export const handleSearchMockItem = async (param?: any): Promise<AppMockConfType
 
 // 添加或修改mockItem
 export const handleAddOrUpdateMockItemConf = async (param: MockItemParam): Promise<any> => {
-  const { id, path: mockApiPath, remarks, mockPattern, type: mockRequestType } = param;
-  const paths: string[] = mockApiPath.split('/');
-  paths[0] === '' && paths.shift();
-  paths[paths.length - 1] === '' && paths.pop();
-  const apiAlbumPath = paths.length ? paths.join('.') : mockApiPath;
-
+  const { id, path: mockApiPath, remarks, mockPattern, type: mockRequestType, requestMethod } = param;
   assert(mockApiPath, 'apiPath is required');
+  const normalizedPath = mockApiPath.replaceAll(':', '__');
+  const paths: string[] = normalizedPath.split('/').filter(Boolean);
+  const apiAlbumPath = `${requestMethod}.${paths.length ? paths.join('.') : mockApiPath}`;
+
   const originPath = memoryData.memoryMockConf.id2ApiAndType[id]?.api || '';
   // 匹配以下情况则说明是新mockItem或者id对应的apiPath已经发生改变，需要进行mockConf的持久化
   if (originPath !== apiAlbumPath) {
@@ -203,7 +202,7 @@ export const handleDeleteMockItem = async (param: { id: string }): Promise<any> 
 
 // 添加或修改mockItem的scene
 export const handleAddOrUpdateSceneItem = async (param: SceneItemParam): Promise<SceneItemBaseInfoType[]> => {
-  const { id, name = '新场景', param: sceneReqParam = '{}', responseConf, mockItemId, iteration } = param;
+  const { id, name = '', param: sceneReqParam = '{}', responseConf, mockItemId, iteration } = param;
   const { api: apiDirName, type: mockType } = memoryData.memoryMockConf.id2ApiAndType[mockItemId];
   const mockApiPath = memoryData.memoryMockConf.id2ApiAndType[mockItemId].api;
   const scenesConf = await getMockItemSceneListConf(mockApiPath);
@@ -291,7 +290,7 @@ export const createMockItemAndSceneItemFromProxy = (param: {
   const { id: sceneId, name, param: sceneParam } = sceneItem;
   // 处理mockItem不存在的情况
   if(!memoryData.memoryMockConf.id2ApiAndType[mockItem.id]) {
-    const mockItemDir = apiPath.split('/').filter(Boolean).join('.');
+    const mockItemDir = `${requestMethod ?? 'GET'}.${apiPath.split('/').filter(Boolean).join('.')}`;
     memoryData.memoryMockItemIdAndApiPairList.unshift({ id: mockItemId, apiPath: mockItemDir, type });
     memoryData.memoryMockConf.id2ApiAndType[mockItemId] = { api: mockItemDir, type };
     memoryData.memoryMockConf.api2IdAndCheckedScene[mockItemDir] = { id: mockItemId, mockPattern: mockPattern ?? 'mock', selectedSceneId: sceneId };

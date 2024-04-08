@@ -88,7 +88,7 @@ export const proxyRequest = (proxyInfo: any, req: http.IncomingMessage, res: htt
 
         // 将响应数据转换为mock配置
         if ( isCreateMockItemFromRequest ) {
-          const mockItemdir = formattedApiPath.split('/').filter(Boolean).join('.') ?? 'default';
+          const mockItemdir = `${req.method ?? 'GET'}.${formattedApiPath.split('/').filter(Boolean).join('.')}`;
           const fileName = join(projectRootDir, mockDirName, mockItemdir, 'scenes', `${sceneId}.ts`);
           const formattedMockConf = `export default (param: any) => {
             return ${JSON.stringify(objFromStream, null, 2)};
@@ -130,17 +130,19 @@ export const proxyRequest = (proxyInfo: any, req: http.IncomingMessage, res: htt
     proxyReq.setHeader(authKey, auth[authKey]);
   }
 
+  // 将客户端的请求体转发到目标服务器
+  const excludeHeaders = ['sec-fetch-dest', 'sec-fetch-mode', 'sec-fetch-site', 'sec-ch-ua-mobile', 'connection', 'host', 'origin', 'sec-ch-ua'];
+  Object.keys({ ...req.headers }).forEach((key: string) => {
+    if (!excludeHeaders.includes(key)) {
+      proxyReq.setHeader(key, req.headers[key] as string);
+    }
+  });
+
+  proxyReq.setHeader('Connection', 'keep-alive');
+  proxyReq.setHeader('Origin', target);
+  proxyReq.setHeader('Content-Type', req.headers['content-type'] ?? 'application/json');
+
   if (req.method !== 'GET') {
-    // 将客户端的请求体转发到目标服务器
-    const includeHeaders = ['user-agent', 'content-length'];
-    includeHeaders.forEach((key: string) => {
-      if (req.headers[key]) {
-        proxyReq.setHeader(key, req.headers[key] as string);
-      }
-    });
-    proxyReq.setHeader('Connection', 'keep-alive');
-    proxyReq.setHeader('Origin', target);
-    proxyReq.setHeader('Content-Type', req.headers['content-type'] ?? 'application/json');
     req.pipe(proxyReq);
   } else {
     // 将客户端的请求体转发到目标服务器
