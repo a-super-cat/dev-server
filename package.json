@@ -1,5 +1,5 @@
 {
-  "name": "@jiazhiwe/dev-server",
+  "name": "@jiazhiwei/dev-server",
   "version": "1.1.2",
   "description": "a mock server: you can config api response with typescript through web page.",
   "main": "dist/index.js",
