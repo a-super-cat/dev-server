@@ -1,6 +1,6 @@
 {
   "name": "@easily-tools/mock-server",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "a mock server: you can config api response with typescript through web page.",
   "main": "dist/index.js",
   "type": "module",
