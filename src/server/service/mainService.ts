@@ -123,7 +123,7 @@ export const getMockItemAndSceneItemConf = async ():Promise<MemoryMockItemAndSce
 // 保存迭代列表
 export const handleSaveIterationList = async (param: { list: string[] }): Promise<boolean> => {
   const tmp = await readObjectFromJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'));
-  tmp.iterationList = Object.values(param?.list ?? []);
+  tmp.iterationList = Object.values(param?.list ?? {});
   return await writeObjectToJsonFile(path.join(projectRootDir, mockDirName, 'mockConf.json'), tmp);
 };
 // 获取迭代列表
@@ -209,6 +209,9 @@ export const handleAddOrUpdateSceneItem = async (param: SceneItemParam): Promise
   const sceneItemIdAndInfoPairList = memoryData.memoryMockItemAndSceneItemListPair[mockItemId] || [];
   if (!scenesConf[id]) {
     sceneItemIdAndInfoPairList.unshift({ id, name, param: sceneReqParam, iteration });
+  } else {
+    const i = sceneItemIdAndInfoPairList.findIndex((item) => item.id === id);
+    sceneItemIdAndInfoPairList[i] = { id, name, param: sceneReqParam, iteration };
   }
 
   if (Object.keys(memoryData.memoryMockItemAndSceneItemConf[mockType] ?? {}).length === 0) {
